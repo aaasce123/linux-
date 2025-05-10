@@ -1,17 +1,11 @@
-#include"main.h"
+#include <sys/epoll.h>
 #include<unistd.h>
+#include"threadpool.h"
 #include <bits/pthreadtypes.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-void error(int ret,int pd,char *str){
-
-    if(ret == pd){
-        perror(str);
-        exit(EXIT_FAILURE );
-  }   
-}
+#include"ser_main.h"
 
 void pthread_error(int ret ,char* str){
 
@@ -54,10 +48,9 @@ int taskSize(task_queue_t* que){
     return que->queSize;
 }
 
-int taskEnque(task_queue_t* que, int acc_fd){
+int taskEnque(task_queue_t* que,task_t* ptask ){
 
-    task_t * pnode = (task_t *) calloc(1,sizeof(task_t));
-    pnode->accept_fd = acc_fd;
+    task_t * pnode = ptask;
     pnode->pNext =NULL;
 
    int ret=pthread_mutex_lock(&que->mutex);
@@ -77,30 +70,27 @@ int taskEnque(task_queue_t* que, int acc_fd){
      return 0;
 }
 
-int taskDeque(task_queue_t* que){
+task_t* taskDeque(task_queue_t* que){
     int ret=pthread_mutex_lock(&que->mutex);
-    int accfd =-1;
+    task_t* ptask;
     while(que->flag&&queueIsEmpty(que)){
         pthread_cond_wait(&que->cond,&que->mutex);
     }
     if(que->flag){
-        accfd= que->pFront->accept_fd;
-        task_t* pDelete =que->pFront;
-
+       ptask = que->pFront;
         if(taskSize(que)==1){
             que->pFront = que->pRear =NULL;
         }else{
             que->pFront =que->pFront->pNext;
         }
-        free(pDelete);
         que->queSize--;
 
     }else{
-        accfd= -1;
+        ptask= NULL;
     }
     ret =pthread_mutex_unlock(&que->mutex);
     pthread_error(ret,"mutex_unlock failed");
-    return accfd;
+    return ptask;
 }
 
 int broadcastALL(task_queue_t* que){
@@ -128,6 +118,7 @@ int threadpoolDestroy(threadpool_t* pthreadpool){
     return 0;
 }
 
+//线程开始
 int threadpoolStart(threadpool_t* pthreadpool){
     if(pthreadpool){
         for(int i=0;i<pthreadpool->pthreadNum;i++){
@@ -138,6 +129,7 @@ int threadpoolStart(threadpool_t* pthreadpool){
     return 0;
 }
 
+//线程终止
 int threadpoolStop(threadpool_t * pthreadpool){
     while(!queueIsEmpty(&pthreadpool->que)){
         printf("等待任务结束，需要返回");
@@ -150,12 +142,15 @@ int threadpoolStop(threadpool_t * pthreadpool){
     }
     return 0;
 }
+
+//创建线程运行函数
 void* threadFunc(void* arg){
     threadpool_t* pthreadpool = (threadpool_t* )arg;
     while(1){
-        int accfd=taskDeque(&pthreadpool->que);
-        if(accfd > 0){
-            dotask();
+        task_t* ptask=taskDeque(&pthreadpool->que);
+        if(ptask){
+            dotask(ptask);
+            free(ptask);
         }else{
             break;
         }
@@ -163,3 +158,28 @@ void* threadFunc(void* arg){
       printf("thread %ld is exiting\n",pthread_self());
       return NULL;
 }
+
+//分析消息类型
+void handleMessage(int acc_fd,int epoll_fd,task_queue_t* que){
+    int length= -1;
+    int ret=recvn(acc_fd,epoll_fd,&length,sizeof(length));
+    printf("recv: %d length\n",length);
+
+    int cmdType=-1;
+    ret=recvn(acc_fd,epoll_fd,&cmdType,sizeof(cmdType));
+    printf("recv cmd tyoe: %d \n",cmdType);
+
+    task_t* ptask= calloc(1,sizeof(task_t));
+    ptask->accept_fd=acc_fd;
+    ptask->type =cmdType;
+    if(length>0){
+        ret=recvn(acc_fd,epoll_fd,ptask->data,length+1);
+        if(ret>0){
+            taskEnque(que,ptask);
+        } 
+    }else if(length ==0){
+            taskEnque(que,ptask);
+    }
+
+}
+

@@ -1,11 +1,14 @@
-#include"main.h"
-#include "socket_utils.h"
+#include"ser_main.h"
+#include"threadpool.h"
+#include"socket_utils.h"
 #include<signal.h>
-#include <pthread.h>
+#include<errno.h>
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <time.h>
+#include<stdlib.h>
+#include<stdio.h>
 #define continue_wait_block 10
 #define MAX_EVENTS 20
 #define PTHREAD_NUM 8
@@ -55,14 +58,14 @@ int main(int  argc, char *argv[]){
    int opt=1;
    setsockopt(listen_fd,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof(opt));
    int ret= bind(listen_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
-   error(ret,-1,"bind failed");
+   my_error(ret,-1,"bind failed");
    
    listen(listen_fd,continue_wait_block);
     
    printf("打开连接\n");
      //epoll处理listen
     int epoll_fd = epoll_create1(0);
-    error(epoll_fd,-1,"epoll_create1 failed");
+    my_error(epoll_fd,-1,"epoll_create1 failed");
     addEpollfd(epoll_fd,listen_fd,EPOLLIN);   
     addEpollfd(epoll_fd,exitPipe[0],EPOLLIN);
    struct epoll_event* events=calloc(MAX_EVENTS,sizeof(struct epoll_event));
@@ -70,24 +73,21 @@ int main(int  argc, char *argv[]){
       while(1){
        int nready = epoll_wait(epoll_fd,events,MAX_EVENTS,-1);
        //收到中断信号
-       if(nready==-1 && errno ==EINTR){
-           continue;
-           }
 
-       else if(nready== -1){
-           error(nready,-1,"epoll_wait");
-       }else{
+      
 
          for(int i=0;i<nready;i++){
           int fd=events[i].data.fd;
           if(fd== listen_fd){
                 printf("连接建立中..\n");
                 int accept_fd =accept(listen_fd,NULL,NULL);
-                printf("%d\n",accept_fd);
-                error(accept_fd,-1,"accpet  ");
-                taskEnque(&pthreadpool->que,accept_fd);
+                printf("通信socket:%d\n",accept_fd);
+                my_error(accept_fd,-1,"accpet  ");
+                addEpollfd(epoll_fd,accept_fd,EPOLLIN|EPOLLET);
+
          }
            else if(fd == exitPipe[0]){
+               printf("进入退出处理");
                //线程池退出
                int howmany= 0;
                read(exitPipe[0],&howmany,sizeof(howmany));
@@ -98,7 +98,11 @@ int main(int  argc, char *argv[]){
                close(exitPipe[0]);
                printf("\nchild process exit.\n");
                exit(0);
+           }else{
+              handleMessage(fd,epoll_fd,&pthreadpool->que);
+              //分析任务成功
+               
            }
        }
-     }
+     
 }} 

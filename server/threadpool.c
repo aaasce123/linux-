@@ -163,17 +163,19 @@ void* threadFunc(void* arg){
 void handleMessage(int acc_fd,int epoll_fd,task_queue_t* que){
     int length= -1;
     int ret=recvn(acc_fd,epoll_fd,&length,sizeof(length));
+    if(ret>0)
     printf("recv: %d length\n",length);
 
     int cmdType=-1;
     ret=recvn(acc_fd,epoll_fd,&cmdType,sizeof(cmdType));
+    if(ret>0)
     printf("recv cmd tyoe: %d \n",cmdType);
 
     task_t* ptask= calloc(1,sizeof(task_t));
     ptask->accept_fd=acc_fd;
     ptask->type =cmdType;
     if(length>0){
-        ret=recvn(acc_fd,epoll_fd,ptask->data,length+1);
+        ret=recvn(acc_fd,epoll_fd,ptask->data,length);
         if(ret>0){
             taskEnque(que,ptask);
         } 

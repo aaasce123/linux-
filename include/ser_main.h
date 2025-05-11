@@ -1,11 +1,16 @@
 #ifndef SER_MAIN_H
 #define SER_MAIN_H
 #include"socket_utils.h"
+#include<fcntl.h>
+#include<sys/types.h>
+#include<unistd.h>
+#include<stdio.h>
 #include <stddef.h>
 #include<string.h>
 #include<dirent.h>
 #include <stdint.h>
-
+#include<sys/stat.h>
+#define BUFFER_SIZE 4096
 typedef enum{
     REGISTER,
     LOGIN,
@@ -15,7 +20,7 @@ typedef enum{
     COMMAND_PUTS,
     COMMAND_GETS,
     COMMAND_RM,
-    COMMAND_MADIR,
+    COMMAND_MKDIR,
     COMMAND_NOT
 }CmdType;
 //任务结点
@@ -36,18 +41,22 @@ void pthread_error(int ret,char* str);
 
 int frecv(int sockfd,void* buff,size_t length);
 int fsend(int sockfd,void* buff,size_t length);
+
 void Register();
 void Login();
 
 //命令
-void* lsCommand(task_t* ptask,int sockfd); 
+void lsCommand(task_t* ptask,int sockfd); 
 //进入服务器对应目录
 void cdCommand(task_t* ptask,int sockfd);
-void mkdirCommand();
-void rmdirCommand();
+void pwdCommand(task_t* ptask,int sockfd);
+void mkdirCommand(task_t* ptask, int sockfd);
+void rmdirCommand(task_t* ptask, int sockfd);
 //上传文件
-void putsCommand();
-//下载文件
-void getsCommand();
+void putsCommand(task_t* ptask, int sockfd);
 
+//下载文件
+void getsCommand(task_t* ptask,int sockfd);
+void getsmallfile(int fd, int sockfd,int file_length);
+void getsbigfile(task_t* ptask,int sockfd,int file_length);
 #endif

@@ -5,7 +5,7 @@
 #include<stdlib.h>
 #include"socket_utils.h"
 #include<string.h>
-#define COMMAND_MAX_LEN 10
+#define COMMAND_MAX_LEN 100
 void help();
 
 int main(int argc, char *argv[]){ 
@@ -41,7 +41,7 @@ int main(int argc, char *argv[]){
 //先输入命令
     scanf("%s",train_command);
     if(strcmp(train_command,"quit")==0||strcmp(train_command,"q")==0){
-        continue;
+        return 0;
     }
     if(strcmp(train_command,"help")==0){
         help();
@@ -55,14 +55,16 @@ int main(int argc, char *argv[]){
           printf("命令错误，请重新输入\n");
           continue;
     }
-    else{  scanf("%s",train.buff);
+    else{ 
+    scanf("%s",train.buff);
     train.len=strlen(train.buff)+1;
+    printf("%d\n",train.len);
     }
     //标出来了任务信息，
-    send(client_fd,&train.len,sizeof(train.len),0);
-    send(client_fd,&train.type,sizeof(train.type),0);
+   fsend(client_fd,&train.len,sizeof(train.len));
+   fsend(client_fd,&train.type,sizeof(train.type));
     if(train.len>0)
-    send(client_fd,train.buff,train.len,0);
+   fsend(client_fd,train.buff,train.len);
     client_recv(train,client_fd);
 
    }

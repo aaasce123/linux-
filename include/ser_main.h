@@ -1,6 +1,8 @@
 #ifndef SER_MAIN_H
 #define SER_MAIN_H
+#define _POSIX_C_SOURCE 200809L 
 #include"socket_utils.h"
+#include <unistd.h>
 #include<fcntl.h>
 #include<sys/types.h>
 #include<unistd.h>
@@ -54,6 +56,8 @@ void mkdirCommand(task_t* ptask, int sockfd);
 void rmdirCommand(task_t* ptask, int sockfd);
 //上传文件
 void putsCommand(task_t* ptask, int sockfd);
+void putsbig_recv(char* filename,int sockfd,int file_length);
+void putsmall_recv(char* filename,int sockfd,int file_length);
 
 //下载文件
 void getsCommand(task_t* ptask,int sockfd);

@@ -53,6 +53,11 @@ void dotask(task_t* ptask){
     case COMMAND_GETS:
         getsCommand(ptask,ptask->accept_fd);
         break;
+    case COMMAND_PUTS:
+        putsCommand(ptask,ptask->accept_fd);
+        break;
+    default:
+        printf("还未开发其他操作\n");
     } 
 }
 
@@ -192,6 +197,7 @@ void getsCommand(task_t* ptask,int sockfd){
     send(sockfd,&ret,sizeof(ret),0);
     if(ret<0){
         perror("open file");
+        return;
     }
     else{
         int file_name_length=strlen(ptask->data)+1;
@@ -206,8 +212,8 @@ void getsCommand(task_t* ptask,int sockfd){
       }else{
           getsmallfile(file_fd,sockfd,file_length);
       }
-    }
     close(file_fd);
+    }
 }
 
 void getsmallfile(int fd,int sockfd,int file_length){
@@ -228,12 +234,64 @@ void getsmallfile(int fd,int sockfd,int file_length){
     }
     printf("\n");
     if(sum!=file_length){
-        printf("通知用户重新发送\n");
+        printf("通知用户需要重新发送\n");
     }
 }
 void getsbigfile(task_t* ptask,int sockfd,int file_length){
 
 }
 
+void putsCommand(task_t* ptask,int sockfd){
+    int ret;
+    recv(sockfd,&ret,sizeof(ret),0);
+    if(ret<0){
+        printf("客户端出现问题，上传文件失败\n");
+        return;
+    }else{
+      int file_name_length=strlen(ptask->data)+1;
+      recv(sockfd,&file_name_length,sizeof(file_name_length),0);
+     char filename[100];
+     recv(sockfd,filename,file_name_length,0);
+     int file_length;
+     recv(sockfd,&file_length,sizeof(file_length),0);
+     if(file_length>104857600){
+         putsbig_recv(filename,sockfd,file_length);
+     }else{
+         putsmall_recv(filename,sockfd,file_length);
+     }
+    }
+}
 
+void putsmall_recv(char* filename,int sockfd,int file_length){
+    int file_fd=open(filename,O_RDWR|O_CREAT|O_TRUNC,0755);
+       if(file_fd<0){                                                
+           perror("open");                                           
+           return;                                                   
+       } 
+     int ret=ftruncate(file_fd,file_length);
+     if(ret==0){
+         char data[BUFFER_SIZE];
+         int sum=0;
+         int r=0;
+         float percent=(float)sum/file_length*100;                   
+         while(sum<file_length){                                     
+             r=recv(sockfd,data,sizeof(data),0);//不能用frecv，因为第三个参数是接收最大，不满足的话会直接卡住.
+             size_t bytes_wrtten=write(file_fd,data,r);              
+                                                                     
+             sum+=bytes_wrtten;                                      
+           percent = (float)sum / file_length * 100;
+           printf("\r接收文件进度: %.1f%%", percent);
+           fflush(stdout);  // 刷新输出缓冲区，以便实时显示进度      
+         }
+         if(sum== file_length){
+                printf("\n文件接收完成！\n");
+         }                                                           
+   
+     close(file_fd);
+   }
+
+}
  
+void putsbig_recv(char* filename,int sockfd,int file_length){
+
+}

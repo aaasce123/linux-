@@ -169,7 +169,7 @@ void handleMessage(int acc_fd,int epoll_fd,task_queue_t* que){
     int cmdType=-1;
     ret=recvn(acc_fd,epoll_fd,&cmdType,sizeof(cmdType));
     if(ret>0)
-    printf("recv cmd tyoe: %d \n",cmdType);
+    printf("recv cmd tyoe: %d \n\n",cmdType);
 
     task_t* ptask= calloc(1,sizeof(task_t));
     ptask->accept_fd=acc_fd;

@@ -6,6 +6,7 @@
 #include <netdb.h>
 #include<fcntl.h>
 #include<stdio.h>
+#include<sys/stat.h>
 #include <stddef.h>
 #include <unistd.h>
 typedef enum{
@@ -36,8 +37,14 @@ void rmdir_recv(int sockfd);
 void ls_recv(int sockfd);
 void cd_recv(int sockfd);
 void pwd_recv(int sockfd);
+
 void gets_recv(int sockfd);
 void getsmall_recv(char* filename,int sockfd,int file_length);
 void getsbig_recv(char* filename,int sockfd,int file_length);
-void written(char* data,int sockfd,int length);
+
+void puts_send(train_t train,int sockfd);
+void putsmall_send(int fd,int sockfd,int file_length);
+void putsbig_send(int fd,int sockfd, int file_length);
+size_t recvn(int sockfd,void* buff, size_t lengtg,int nume);
+
 #endif

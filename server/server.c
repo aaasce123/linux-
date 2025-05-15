@@ -1,7 +1,9 @@
+#include "hashtable.h"
 #include"ser_main.h"
 #include"threadpool.h"
 #include"socket_utils.h"
 #include<signal.h>
+#include"config.h"
 #include<errno.h>
 #include <string.h>
 #include <sys/epoll.h>
@@ -21,8 +23,10 @@ void sigHandler(int num){
 }
 
 int main(int  argc, char *argv[]){
-
-   check_argc(argc);  
+    if(argc!=2){
+        fprintf(stderr,"仅导入配置文件\n");
+      return 0;
+    }
     
    pipe(exitPipe);
    pid_t pid=fork();
@@ -39,21 +43,25 @@ int main(int  argc, char *argv[]){
 
    close(exitPipe[1]);
    //启动线程池;
+   HashTable ht;
+   initHashTable(&ht);
+   readConfig(argv[1],&ht);
+   printHashTable(&ht);
    threadpool_t* pthreadpool= calloc(1,sizeof(threadpool_t));
    if(pthreadpool==NULL){
        fprintf(stderr,"pthreadpool 分配失败");
        exit(EXIT_FAILURE);
    }
-   threadpoolInit(pthreadpool,PTHREAD_NUM);
+   threadpoolInit(pthreadpool,atoi((const char*)find(&ht,THREAD_NUM)));
    threadpoolStart(pthreadpool);
 
    int listen_fd =socket(AF_INET,SOCK_STREAM ,0);
-   char *ip_addr=argv[1];
+   char *ip_addr=(char*)find(&ht,IP);
    struct sockaddr_in serv_addr;
    memset(&serv_addr ,0,sizeof(serv_addr));
    serv_addr.sin_family=AF_INET;
    inet_pton(AF_INET, ip_addr,&serv_addr.sin_addr);
-   serv_addr.sin_port=htons(atoi(argv[2]));
+   serv_addr.sin_port=htons(atoi(find(&ht,PORT)));
    
    int opt=1;
    setsockopt(listen_fd,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof(opt));
@@ -93,6 +101,7 @@ int main(int  argc, char *argv[]){
                read(exitPipe[0],&howmany,sizeof(howmany));
                threadpoolStop(pthreadpool);
                threadpoolDestroy(pthreadpool);
+               destroyHashTable(&ht);
                close(listen_fd);
                close(epoll_fd);
                close(exitPipe[0]);

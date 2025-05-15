@@ -58,7 +58,6 @@ int main(int argc, char *argv[]){
     else{ 
     scanf("%s",train.buff);
     train.len=strlen(train.buff)+1;
-    printf("%d\n",train.len);
     }
     //标出来了任务信息，
    fsend(client_fd,&train.len,sizeof(train.len));
@@ -69,14 +68,14 @@ int main(int argc, char *argv[]){
 
    }
   //客户端需要把不同命令种类发送的分开
-  //主要因为后面发送大文件的时候，大文件的发送格式不一样
-  //还有不同命令的接收种类分开
-  //方便统一处理
   //后续放一个all_send/all_recv
 }
 void help(){
   printf("--------------------输入指南--------------------\n");
-  printf("当前任务列表：cd，ls，mkdir，rm，pwd，get puts\n");
+  printf("当前任务列表：cd，ls，mkdir，rm，pwd，get puts\n"
+        "输入quit表示退出\n" );
+
+
   printf("--------------------输入指南--------------------\n");
 
 }

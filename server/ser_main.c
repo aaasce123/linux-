@@ -8,14 +8,9 @@
 #include<unistd.h>
 #include<stdio.h>
 #include<stdlib.h>
-void check_argc(int num){
-
-    if(num !=3){
-        fprintf(stderr,"argc error");
-        exit(EXIT_FAILURE);
-    } 
+void  ser_tcpinit(void* ip, void* port){
+   int listen_fd
 }
-
 void addEpollfd(int epfd, int fd, uint32_t events){
     struct epoll_event ev;
     ev.events=events;
@@ -55,6 +50,7 @@ void dotask(task_t* ptask){
         break;
     case COMMAND_PUTS:
         putsCommand(ptask,ptask->accept_fd);
+        addEpollfd(ptask->epoll_fd,ptask->accept_fd,EPOLLIN|EPOLLET);
         break;
     default:
         printf("还未开发其他操作\n");
@@ -167,7 +163,23 @@ void mkdirCommand(task_t* ptask,int sockfd){
 }
 
 void rmdirCommand(task_t* ptask,int sockfd){
-    int ret=rmdir(ptask->data);
+    struct stat st;
+    int ret =stat(ptask->data,&st);
+    if(ret ==-1){
+        perror("stat failed");
+        send(sockfd,&ret,sizeof(ret),0);
+        return;
+    }
+    if(S_ISDIR(st.st_mode)){
+     ret=rmdir(ptask->data);
+    }else if(S_ISREG(st.st_mode)){
+        ret =unlink(ptask->data);
+    }else{
+        fprintf(stderr,"Unspported file\n");
+        ret =-1;
+    }
+
+         
     send(sockfd,&ret,sizeof(ret),0);
     if(ret ==-1){
         perror("rmdir failde");
@@ -295,3 +307,10 @@ void putsmall_recv(char* filename,int sockfd,int file_length){
 void putsbig_recv(char* filename,int sockfd,int file_length){
 
 }
+
+void DelEpollfd(int epfd,int fd){
+    if(epoll_ctl(epfd,EPOLL_CTL_DEL,fd,NULL)==-1){
+        perror("epoll DEL failed ");
+ }
+}
+

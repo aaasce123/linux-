@@ -28,16 +28,19 @@ typedef enum{
 //任务结点
 typedef struct task_s{
 CmdType type;
+int epoll_fd;
  int accept_fd;
  char data[1024];
  struct task_s* pNext;
 }task_t;
 //任务节点，仅仅把任务信息传过去
 //包括操作类型，连接端口号，操作类型带的信息;
+void ser_tcpinit(void* ip, void* port);
 void dotask(task_t* ptask);
 int recvn(int sockfd,int epoll_fd,void* buff,size_t len);
 void check_argc(int num);
 void addEpollfd(int epfd, int fd,uint32_t events);
+void DelEpollfd(int epfd, int fd);
 void my_error(int ret, int pd ,char* str);
 void pthread_error(int ret,char* str);
 

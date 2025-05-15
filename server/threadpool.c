@@ -172,13 +172,16 @@ void handleMessage(int acc_fd,int epoll_fd,task_queue_t* que){
     printf("recv cmd tyoe: %d \n\n",cmdType);
 
     task_t* ptask= calloc(1,sizeof(task_t));
+    ptask->epoll_fd=epoll_fd;
     ptask->accept_fd=acc_fd;
     ptask->type =cmdType;
     if(length>0){
         ret=recvn(acc_fd,epoll_fd,ptask->data,length);
         if(ret>0){
-            taskEnque(que,ptask);
-        } 
+            if(ptask->type== COMMAND_PUTS){
+                DelEpollfd(ptask->epoll_fd,ptask->accept_fd);
+            }
+            taskEnque(que,ptask); } 
     }else if(length ==0){
             taskEnque(que,ptask);
     }

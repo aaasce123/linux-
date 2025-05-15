@@ -197,7 +197,7 @@ void putsmall_send(int fd,int sockfd,int file_length){
     size_t sum=0;
     float percent=(float)sum/file_length*100;
     while((bytes_read=read(fd,file_buff,sizeof(file_buff)))>0){
-        if(fsend(sockfd,file_buff,bytes_read)<0){
+        if(send(sockfd,file_buff,bytes_read,0)<0){
             perror("Failed to send file data");
             return;
         }

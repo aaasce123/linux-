@@ -1,5 +1,6 @@
 #include "client.h"
 #include <complex.h>
+#include <math.h>
 #include <sys/socket.h>
 #include<stdio.h>
 #include<stdlib.h>
@@ -13,6 +14,8 @@ int main(int argc, char *argv[]){
 
   int client_fd=cli_tcpinit("192.168.230.130","8080");
   train_t train;
+  userLogin1(client_fd,&train);
+  userLogin2(client_fd,train);
   char train_command[COMMAND_MAX_LEN];
   
 

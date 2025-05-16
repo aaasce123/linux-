@@ -1,21 +1,29 @@
+# 编译器与编译选项
 CC := gcc
 CFLAGS := -g -Wall -I../include
 LIBS := -lpthread -lcrypt
 
-SRCS_SERVER := server.c threadpool.c ser_main.c config.c hashtable.c
-OBJS_SERVER := $(SRCS_SERVER:.c=.o)
-TARGET_SERVER := server
+# 源文件与目标文件
+SRCS := server.c threadpool.c ser_main.c config.c hashtable.c user.c
+OBJS := $(SRCS:.c=.o)
 
+# 目标文件名
+TARGET := server
+
+# 默认目标
 .PHONY: all clean
 
-all: $(TARGET_SERVER)
+all: $(TARGET)
 
-$(TARGET_SERVER): $(OBJS_SERVER)
-<Tab>$(CC) $(CFLAGS) $^ -o $@ $(LIBS)
+# 链接目标文件
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) $^ -o $@ $(LIBS)
 
+# 编译每个 .c 为 .o
 %.o: %.c
-<Tab>$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
+# 清理构建文件
 clean:
-<Tab>rm -f *.o $(TARGET_SERVER)
+	rm -f *.o $(TARGET)
 

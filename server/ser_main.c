@@ -1,6 +1,6 @@
 #include"ser_main.h"
 #include <bits/pthreadtypes.h>
-#include"user.h""
+#include"user.h"
 #include <fcntl.h>
 #include <stdint.h>
 #include <string.h>
@@ -66,7 +66,11 @@ void dotask(task_t* ptask){
         addEpollfd(ptask->epoll_fd,ptask->accept_fd,EPOLLIN|EPOLLET);
         break;
     case TASK_LOGIN_SECTION1:
-        
+       TASK_check1(ptask); 
+       break;
+    case TASK_LOGIN_SECTION2:
+       TASK_check2(ptask);
+       break;
     default:
         printf("还未开发其他操作\n");
     } 

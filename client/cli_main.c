@@ -22,15 +22,17 @@ int cli_tcpinit(char* ip,char* port){
 
 void  userLogin1(int sockfd,train_t* t){
    printf("userLogin1\n");
-   memset(t,0,sizeof(t));
+   memset(t,0,sizeof(train_t));
    while(1){
        printf("请输入用户名称:\n");
        scanf("%s",t->buff);
        t->type=TASK_LOGIN_SECTION1;
        t->len=strlen(t->buff)+1;
-       send(sockfd,t,8+t->len,0);
+       send(sockfd,&t->len,sizeof(t->len),0);
+       send(sockfd,&t->type,sizeof(t->type),0);
+       send(sockfd,t->buff,t->len,0);
 
-      memset(t,0,sizeof(t));
+      memset(t,0,sizeof(train_t));
        recv(sockfd,&t->len,sizeof(t->len),0);
        recv(sockfd,&t->type,sizeof(t->type),0);
        if(t->type== TASK_LOGIN_SECTION1_RESP_ERROR){
@@ -43,27 +45,32 @@ void  userLogin1(int sockfd,train_t* t){
    return ;
 }
 
-void userLogin2(int sockfd, train_t *t){
+void userLogin2(int sockfd, train_t t){
    printf("userLogin2.\n");
+   train_t pt=t;
    while(1){
+       t=pt;
           printf("请输入密码:\n");
           char passwd[20];
           scanf("%s",passwd);
-          char* encrtyped=crypt(passwd,t->buff);
-          t->len=strlen(encrtyped)+1;
-          t->type=TASK_LOGIN_SECTION2;
-          strncpy(t->buff,encrtyped,t->len);
-          send(sockfd,&t,8+t->len,0);
+          char* encrtyped=crypt(passwd,t.buff);
+          t.len=strlen(encrtyped)+1;
+          t.type=TASK_LOGIN_SECTION2;
+          strncpy(t.buff,encrtyped,t.len);
+
+          send(sockfd,&t.len,sizeof(t.len),0);
+          send(sockfd,&t.type,sizeof(t.type),0);
+          send(sockfd,t.buff,t.len,0);
            
-          memset(t,0,sizeof(train_t));
-          recv(sockfd,&t->len,4,0);
-          recv(sockfd,&t->type,4,0);
-          if(t->type==TASK_LOGIN_SECTION2_RESP_ERROR){
+          memset(&t,0,sizeof(train_t));
+          recv(sockfd,&t.len,4,0);
+          recv(sockfd,&t.type,4,0);
+          if(t.type==TASK_LOGIN_SECTION2_RESP_ERROR){
               printf("sorry,密码不正确:\n");
               continue;
           }
-          recv(sockfd,t->buff,t->len,0);
-          printf("Login success:当前目录:%s\n",t->buff);
+          recv(sockfd,t.buff,t.len,0);
+          printf("Login success:当前目录:%s\n",t.buff);
           break;
    }
    return;

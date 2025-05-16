@@ -38,7 +38,7 @@ int frecv(int sockfd,void* buff,size_t length);
 int fsend(int sock,void* buff,size_t length);
 //命令接收
 void userLogin1(int sockfd,train_t* train);
-void userLogin2(int sockfd,train_t* train);
+void userLogin2(int sockfd,train_t train);
 
 void client_recv(train_t train,int sockfd );
 void mkdir_recv(int sockfd);

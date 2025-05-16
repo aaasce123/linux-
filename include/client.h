@@ -5,13 +5,12 @@
 #include<sys/types.h>
 #include <netdb.h>
 #include<fcntl.h>
+#include<crypt.h>
 #include<stdio.h>
 #include<sys/stat.h>
 #include <stddef.h>
 #include <unistd.h>
 typedef enum{
-    REGISTER,
-    LOGIN,
     COMMAND_CD,
     COMMAND_LS,
     COMMAND_PWD,
@@ -19,7 +18,13 @@ typedef enum{
     COMMAND_GETS,
     COMMAND_RM,
     COMMAND_MKDIR,
-    COMMAND_NOT
+    COMMAND_NOT,
+    TASK_LOGIN_SECTION1=100,
+    TASK_LOGIN_SECTION1_RESP_OK,
+    TASK_LOGIN_SECTION1_RESP_ERROR,
+    TASK_LOGIN_SECTION2,
+    TASK_LOGIN_SECTION2_RESP_OK,
+    TASK_LOGIN_SECTION2_RESP_ERROR,
 }CmdType;
 
 typedef struct{
@@ -27,10 +32,14 @@ typedef struct{
     CmdType type;
     char buff[1024];
 }train_t;
+int cli_tcpinit(char* ip,char* port);
 CmdType Cmd_change(char* str);
 int frecv(int sockfd,void* buff,size_t length);
 int fsend(int sock,void* buff,size_t length);
 //命令接收
+void userLogin1(int sockfd,train_t* train);
+void userLogin2(int sockfd,train_t* train);
+
 void client_recv(train_t train,int sockfd );
 void mkdir_recv(int sockfd);
 void rmdir_recv(int sockfd);

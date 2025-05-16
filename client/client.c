@@ -10,26 +10,8 @@ void help();
 
 int main(int argc, char *argv[]){ 
 
-    if(argc !=3){
-        fprintf(stderr,"argc error");
-        printf("\n");
-        exit(EXIT_FAILURE);
-    } 
 
-  int client_fd=socket(AF_INET,SOCK_STREAM,0);
-
-   char *ip_addr=argv[1];
-   struct sockaddr_in serv_addr;
-   memset(&serv_addr ,0,sizeof(serv_addr));
-   serv_addr.sin_family=AF_INET;
-   inet_pton(AF_INET, ip_addr,&serv_addr.sin_addr);
-   serv_addr.sin_port=htons(atoi(argv[2]));
-
-   int ret =connect(client_fd,(struct sockaddr*)&serv_addr,sizeof(serv_addr));
-   if(ret==-1){
-       perror("connect failed");
-       exit(EXIT_FAILURE);}
-
+  int client_fd=cli_tcpinit("192.168.230.130","8080");
   train_t train;
   char train_command[COMMAND_MAX_LEN];
   

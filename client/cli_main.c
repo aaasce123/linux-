@@ -2,8 +2,72 @@
 #include <fcntl.h>
 #include <stddef.h>
 #include<string.h>
+#include<stdlib.h>
 #include<stdio.h>
 #include <sys/socket.h>
+#include"socket_utils.h"
+int cli_tcpinit(char* ip,char* port){
+    int client_fd=socket(AF_INET,SOCK_STREAM,0);
+   struct sockaddr_in serv_addr;
+   memset(&serv_addr ,0,sizeof(serv_addr));
+   serv_addr.sin_family=AF_INET;
+   inet_pton(AF_INET,ip,&serv_addr.sin_addr);
+   serv_addr.sin_port=htons(atoi(port));
+   int ret =connect(client_fd,(struct sockaddr*)&serv_addr,sizeof(serv_addr));
+   if(ret==-1){
+       perror("connect failed");
+       exit(EXIT_FAILURE);}
+  return client_fd;
+}
+
+void  userLogin1(int sockfd,train_t* t){
+   printf("userLogin1\n");
+   memset(t,0,sizeof(t));
+   while(1){
+       printf("请输入用户名称:\n");
+       scanf("%s",t->buff);
+       t->type=TASK_LOGIN_SECTION1;
+       t->len=strlen(t->buff)+1;
+       send(sockfd,t,8+t->len,0);
+
+      memset(t,0,sizeof(t));
+       recv(sockfd,&t->len,sizeof(t->len),0);
+       recv(sockfd,&t->type,sizeof(t->type),0);
+       if(t->type== TASK_LOGIN_SECTION1_RESP_ERROR){
+           printf("请重新输入用户名:\n");
+           continue;
+       }
+       recv(sockfd,t->buff,t->len,0);
+       break;
+   }
+   return ;
+}
+
+void userLogin2(int sockfd, train_t *t){
+   printf("userLogin2.\n");
+   while(1){
+          printf("请输入密码:\n");
+          char passwd[20];
+          scanf("%s",passwd);
+          char* encrtyped=crypt(passwd,t->buff);
+          t->len=strlen(encrtyped)+1;
+          t->type=TASK_LOGIN_SECTION2;
+          strncpy(t->buff,encrtyped,t->len);
+          send(sockfd,&t,8+t->len,0);
+           
+          memset(t,0,sizeof(train_t));
+          recv(sockfd,&t->len,4,0);
+          recv(sockfd,&t->type,4,0);
+          if(t->type==TASK_LOGIN_SECTION2_RESP_ERROR){
+              printf("sorry,密码不正确:\n");
+              continue;
+          }
+          recv(sockfd,t->buff,t->len,0);
+          printf("Login success:当前目录:%s\n",t->buff);
+          break;
+   }
+   return;
+}
 
 CmdType Cmd_change(char* str){
     if(strcmp(str,"ls")==0)
@@ -13,7 +77,7 @@ CmdType Cmd_change(char* str){
         return COMMAND_CD;
     if(strcmp(str,"pwd")==0)
         return COMMAND_PWD;
-    if(strcmp(str,"puts")==0)
+if(strcmp(str,"puts")==0)
         return COMMAND_PUTS;
     if(strcmp(str,"gets")==0)
         return COMMAND_GETS;

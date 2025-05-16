@@ -1,5 +1,6 @@
 #include"ser_main.h"
 #include <bits/pthreadtypes.h>
+#include"user.h""
 #include <fcntl.h>
 #include <stdint.h>
 #include <string.h>
@@ -8,8 +9,20 @@
 #include<unistd.h>
 #include<stdio.h>
 #include<stdlib.h>
-void  ser_tcpinit(void* ip, void* port){
-   int listen_fd
+int  ser_tcpinit(char* ip, char* port){
+
+   int listen_fd =socket(AF_INET,SOCK_STREAM ,0);
+   struct sockaddr_in serv_addr;
+   memset(&serv_addr ,0,sizeof(serv_addr));
+   serv_addr.sin_family=AF_INET;
+   inet_pton(AF_INET, ip,&serv_addr.sin_addr);
+   serv_addr.sin_port=htons(atoi(port));
+   int opt=1;
+   setsockopt(listen_fd,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof(opt));
+   int ret= bind(listen_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
+   my_error(ret,-1,"bind failed");
+
+   return listen_fd;
 }
 void addEpollfd(int epfd, int fd, uint32_t events){
     struct epoll_event ev;
@@ -52,6 +65,8 @@ void dotask(task_t* ptask){
         putsCommand(ptask,ptask->accept_fd);
         addEpollfd(ptask->epoll_fd,ptask->accept_fd,EPOLLIN|EPOLLET);
         break;
+    case TASK_LOGIN_SECTION1:
+        
     default:
         printf("还未开发其他操作\n");
     } 

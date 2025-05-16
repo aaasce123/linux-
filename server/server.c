@@ -55,18 +55,10 @@ int main(int  argc, char *argv[]){
    threadpoolInit(pthreadpool,atoi((const char*)find(&ht,THREAD_NUM)));
    threadpoolStart(pthreadpool);
 
-   int listen_fd =socket(AF_INET,SOCK_STREAM ,0);
    char *ip_addr=(char*)find(&ht,IP);
-   struct sockaddr_in serv_addr;
-   memset(&serv_addr ,0,sizeof(serv_addr));
-   serv_addr.sin_family=AF_INET;
-   inet_pton(AF_INET, ip_addr,&serv_addr.sin_addr);
-   serv_addr.sin_port=htons(atoi(find(&ht,PORT)));
-   
-   int opt=1;
-   setsockopt(listen_fd,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof(opt));
-   int ret= bind(listen_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
-   my_error(ret,-1,"bind failed");
+   char* port=(char*)find(&ht,PORT);
+   int listen_fd =ser_tcpinit(ip_addr,port);
+
    
    listen(listen_fd,continue_wait_block);
     

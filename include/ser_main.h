@@ -14,8 +14,6 @@
 #include<sys/stat.h>
 #define BUFFER_SIZE 4096
 typedef enum{
-    REGISTER,
-    LOGIN,
     COMMAND_CD,
     COMMAND_LS,
     COMMAND_PWD,
@@ -23,7 +21,12 @@ typedef enum{
     COMMAND_GETS,
     COMMAND_RM,
     COMMAND_MKDIR,
-    COMMAND_NOT
+    TASK_LOGIN_SECTION1=100,
+    TASK_LOGIN_SECTION1_RESP_OK,
+    TASK_LOGIN_SECTION1_RESP_ERROR,
+    TASK_LOGIN_SECTION2,
+    TASK_LOGIN_SECTION2_RESP_OK,
+    TASK_LOGIN_SECTION2_RESP_ERROR,
 }CmdType;
 //任务结点
 typedef struct task_s{
@@ -35,7 +38,7 @@ int epoll_fd;
 }task_t;
 //任务节点，仅仅把任务信息传过去
 //包括操作类型，连接端口号，操作类型带的信息;
-void ser_tcpinit(void* ip, void* port);
+int ser_tcpinit(char* ip, char* port);
 void dotask(task_t* ptask);
 int recvn(int sockfd,int epoll_fd,void* buff,size_t len);
 void check_argc(int num);

@@ -1,8 +1,11 @@
 #ifndef SER_MAIN_H
 #define SER_MAIN_H
 #define _POSIX_C_SOURCE 200809L 
+#define _GNU_SOURCE 
 #include"socket_utils.h"
+#include<sys/sendfile.h>
 #include <unistd.h>
+#include<time.h>
 #include<fcntl.h>
 #include<sys/types.h>
 #include<unistd.h>
@@ -38,6 +41,8 @@ int epoll_fd;
 }task_t;
 //任务节点，仅仅把任务信息传过去
 //包括操作类型，连接端口号，操作类型带的信息;
+const char* TypeToStr(CmdType cmd);
+const char* getCurrentTime();
 int ser_tcpinit(char* ip, char* port);
 void dotask(task_t* ptask);
 int recvn(int sockfd,int epoll_fd,void* buff,size_t len);
@@ -68,5 +73,5 @@ void putsmall_recv(char* filename,int sockfd,int file_length);
 //下载文件
 void getsCommand(task_t* ptask,int sockfd);
 void getsmallfile(int fd, int sockfd,int file_length);
-void getsbigfile(task_t* ptask,int sockfd,int file_length);
+void getsbigfile(int fd,int sockfd,int file_length);
 #endif

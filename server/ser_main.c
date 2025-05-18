@@ -24,6 +24,37 @@ int  ser_tcpinit(char* ip, char* port){
 
    return listen_fd;
 }
+const char* TypeToStr(CmdType cmd){
+     switch(cmd) {
+        case COMMAND_CD: return "COMMAND_CD";
+        case COMMAND_LS: return "COMMAND_LS";
+        case COMMAND_PWD: return "COMMAND_PWD";
+        case COMMAND_PUTS: return "COMMAND_PUTS";
+        case COMMAND_GETS: return "COMMAND_GETS";
+        case COMMAND_RM: return "COMMAND_RM";
+        case COMMAND_MKDIR: return "COMMAND_MKDIR";
+        case TASK_LOGIN_SECTION1: return "TASK_LOGIN_SECTION1";
+        case TASK_LOGIN_SECTION1_RESP_OK: return "TASK_LOGIN_SECTION1_RESP_OK";
+        case TASK_LOGIN_SECTION1_RESP_ERROR: return "TASK_LOGIN_SECTION1_RESP_ERROR";
+        case TASK_LOGIN_SECTION2: return "TASK_LOGIN_SECTION2";
+        case TASK_LOGIN_SECTION2_RESP_OK: return "TASK_LOGIN_SECTION2_RESP_OK";
+        case TASK_LOGIN_SECTION2_RESP_ERROR: return "TASK_LOGIN_SECTION2_RESP_ERROR";
+        default: return "UNKNOWN_COMMAND";
+    }
+}
+
+const char* getCurrentTime(){
+    static char buf[25]; // 格式 "YYYY-MM-DD HH:MM:SS" 共19字符 + 1 '\0'
+    time_t now = time(NULL);
+    struct tm* tm_now = localtime(&now);
+    if (tm_now) {
+        strftime(buf, sizeof(buf), "%F %T", tm_now);
+    } else {
+        buf[0] = '\0'; // 出错时返回空字符串
+    }
+    return buf;
+}
+
 void addEpollfd(int epfd, int fd, uint32_t events){
     struct epoll_event ev;
     ev.events=events;
@@ -60,6 +91,7 @@ void dotask(task_t* ptask){
         break;   
     case COMMAND_GETS:
         getsCommand(ptask,ptask->accept_fd);
+        addEpollfd(ptask->epoll_fd,ptask->accept_fd,EPOLLIN|EPOLLET);
         break;
     case COMMAND_PUTS:
         putsCommand(ptask,ptask->accept_fd);
@@ -239,19 +271,27 @@ void getsCommand(task_t* ptask,int sockfd){
       int file_length=file_buff.st_size;
      send(sockfd,&file_length,sizeof(file_length),0);
       if(file_length>104857600){
-          getsbigfile(ptask,sockfd,file_length);
+          getsbigfile(file_fd,sockfd,file_length);
       }else{
           getsmallfile(file_fd,sockfd,file_length);
       }
-    close(file_fd);
     }
 }
 
 void getsmallfile(int fd,int sockfd,int file_length){
+    int f_length;
+    recv(sockfd,&f_length,sizeof(f_length),0);
     char file_buff[BUFFER_SIZE];
     size_t bytes_read;
     size_t sum=0;
     float percent=(float)sum/file_length*100;
+    if(f_length==0){
+        sum=0;
+    }
+    else{
+        sum=f_length;
+        lseek(fd,f_length,SEEK_SET);}
+        
     while((bytes_read=read(fd,file_buff,sizeof(file_buff)))>0){
         if(fsend(sockfd,file_buff,bytes_read)<0){
               perror("Failed to send file data");
@@ -261,16 +301,31 @@ void getsmallfile(int fd,int sockfd,int file_length){
         percent=(float)sum/file_length*100;
         printf("\r发送文件进度: %.1lf%%",percent);
         fflush(stdout);
-
     }
     printf("\n");
-    if(sum!=file_length){
-        printf("通知用户需要重新发送\n");
+    if(sum!=file_length ){
+        printf("未能传文件成功\n");
+    }
+    close(fd);
+ }
+void getsbigfile(int fd,int sockfd,int file_length){
+    int f_length;
+    recv(sockfd,&f_length,sizeof(f_length),0);
+    off_t p_length=(off_t)f_length;
+    int n=file_length-f_length;
+    while(n>0){
+    int r=sendfile(sockfd,fd,&p_length,n);
+    if(r==-1){
+        perror("sendfile failed:");
+        return;
+    }
+    n=n-r;
+    }
+    if(n==0){
+        printf("大文件已经全部传输\n");
     }
 }
-void getsbigfile(task_t* ptask,int sockfd,int file_length){
 
-}
 
 void putsCommand(task_t* ptask,int sockfd){
     int ret;
@@ -294,17 +349,27 @@ void putsCommand(task_t* ptask,int sockfd){
 }
 
 void putsmall_recv(char* filename,int sockfd,int file_length){
-    int file_fd=open(filename,O_RDWR|O_CREAT|O_TRUNC,0755);
+    int file_fd=open(filename,O_RDWR|O_CREAT,0755);
        if(file_fd<0){                                                
            perror("open");                                           
            return;                                                   
        } 
-     int ret=ftruncate(file_fd,file_length);
-     if(ret==0){
+       struct stat file_buff;
+       fstat(file_fd,&file_buff);
+       int f_length=file_buff.st_size;
+       send(sockfd,&f_length,sizeof(f_length),0);
+
          char data[BUFFER_SIZE];
          int sum=0;
-         int r=0;
+         int r;
          float percent=(float)sum/file_length*100;                   
+         if(f_length==0){
+             ftruncate(file_fd,file_length);
+             sum=0;
+         }else{
+             sum=f_length;
+             lseek(file_fd,f_length,SEEK_SET);
+         }
          while(sum<file_length){                                     
              r=recv(sockfd,data,sizeof(data),0);//不能用frecv，因为第三个参数是接收最大，不满足的话会直接卡住.
              size_t bytes_wrtten=write(file_fd,data,r);              
@@ -319,11 +384,56 @@ void putsmall_recv(char* filename,int sockfd,int file_length){
          }                                                           
    
      close(file_fd);
-   }
-
 }
+
+
  
 void putsbig_recv(char* filename,int sockfd,int file_length){
+        int file_fd=open(filename,O_RDWR|O_CREAT,0775);
+          if(file_fd<0){
+              perror("open");
+              return;
+          }
+          struct stat file_buff;
+          fstat(file_fd,&file_buff);
+          int f_length=file_buff.st_size;
+          send(sockfd,&f_length,sizeof(f_length),0);                                                                            
+          
+         int pipefd[2];
+         pipe(pipefd);
+         int n=file_length-f_length;
+         off_t offset=f_length;
+         while(n>0){
+         int splice_move=n>65536? 65536:n;
+         int r=splice(sockfd,NULL,pipefd[1],NULL,splice_move,SPLICE_F_MORE);
+           if(r==-1){
+               perror("splice sockfd->pipe");
+               break;
+             }
+           int to_write=r;
+             while(to_write>0){
+             int w=splice(pipefd[0],NULL,file_fd,&offset,to_write,SPLICE_F_MORE);
+             if(w==-1)
+             {
+                 perror("spilce pipe->file");
+                 break;
+             }
+             to_write-=w;
+          }
+             if(r==0){
+              break;
+             }
+             n-=r;
+         }
+         close(pipefd[0]);
+         close(pipefd[1]);
+         close(file_fd);
+         if(n==0){
+             printf("文件全部接收\n");
+         }
+         else{
+             printf("文件传输未完成，剩余%d 字节 \n",n);
+       }
 
 }
 

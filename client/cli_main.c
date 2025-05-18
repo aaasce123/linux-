@@ -5,6 +5,8 @@
 #include<stdlib.h>
 #include<stdio.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include"socket_utils.h"
 int cli_tcpinit(char* ip,char* port){
     int client_fd=socket(AF_INET,SOCK_STREAM,0);
@@ -205,17 +207,25 @@ void gets_recv(int sockfd){
 }
 
 void getsmall_recv(char* filename,int sockfd,int file_length){
-    int file_fd=open(filename,O_RDWR|O_CREAT|O_TRUNC,0775);
+    int file_fd=open(filename,O_RDWR|O_CREAT,0775);
     if(file_fd<0){
         perror("open");
         return;
     }
-  int ret=ftruncate(file_fd,file_length);
-  if(ret==0){
-      char data[BUFFER_SIZE];
-      int sum=0;
-      int r=0;
-      float percent=(float)sum/file_length*100;
+    struct stat file_buff; 
+    fstat(file_fd,&file_buff);
+    int f_length=file_buff.st_size;
+    send(sockfd,&f_length,sizeof(f_length),0);
+
+     char data[BUFFER_SIZE];
+     int sum=0;
+     int r;
+     float percent=(float)sum/file_length*100;
+    if(f_length==0){
+      ftruncate(file_fd,file_length);
+      sum=0;}
+    else{sum=f_length;
+    lseek(file_fd,f_length,SEEK_SET);}
       while(sum<file_length){
           r=recvn(sockfd,data,sizeof(data),0);//不能用frecv，因为第三个参数是接收最大，不满足的话会直接卡住.
           size_t bytes_wrtten=write(file_fd,data,r);
@@ -225,19 +235,64 @@ void getsmall_recv(char* filename,int sockfd,int file_length){
         printf("\r接收文件进度: %.1f%%", percent);
         fflush(stdout);  // 刷新输出缓冲区，以便实时显示进度
       }
-      if(sum== file_length){
-             printf("\n文件接收完成！\n");
-      }
-
+       if(sum!=file_length ){
+          printf("重新下载文件，接收失败\n");
+       }else{
+           printf("接收文件完成\n");
+       }    
+    
   close(file_fd);
-}}
+}
 
 void getsbig_recv(char* filename,int sockfd,int file_length){
+     int file_fd=open(filename,O_RDWR|O_CREAT,0775);
+       if(file_fd<0){
+           perror("open");
+           return;
+       }
+       struct stat file_buff;
+       fstat(file_fd,&file_buff);
+       int f_length=file_buff.st_size;
+       send(sockfd,&f_length,sizeof(f_length),0);
 
+      int pipefd[2];
+      pipe(pipefd);
+      int n=file_length-f_length;
+      off_t offset=f_length;
+      while(n>0){
+          int splice_move=n>65536? 65536:n;
+          int r=splice(sockfd,NULL,pipefd[1],NULL,splice_move,0);
+          if(r==-1){
+              perror("splice sockfd->pipe");
+              break;
+          }
+          int to_write=r;
+          while(to_write>0){
+          int w=splice(pipefd[0],NULL,file_fd,&offset,to_write,0);
+          if(w==-1)
+          {
+              perror("spilce pipe->file");
+              break;
+          }
+          to_write-=w;
+       }
+          if(r==0){
+           break;
+          }
+          n-=r;
+      }
+      close(pipefd[0]);
+      close(pipefd[1]);
+      close(file_fd);
+      if(n==0){
+          printf("文件全部接收\n");
+      }
+      else{
+          printf("文件传输未完成，剩余%d 字节 \n",n);
+      }
 }
 
 void puts_send(train_t train,int sockfd){
-
     int file_fd =open(train.buff,O_RDWR);
     int ret=file_fd;
     send(sockfd,&ret,sizeof(ret),0);
@@ -259,14 +314,22 @@ void puts_send(train_t train,int sockfd){
    }else{
        putsmall_send(file_fd,sockfd,file_length);
    }
-   close(file_fd);
  }
 }
 void putsmall_send(int fd,int sockfd,int file_length){
+    int f_length;
+    recv(sockfd,&f_length,sizeof(f_length),0);
     char file_buff[BUFFER_SIZE];
     size_t bytes_read;
     size_t sum=0;
-    float percent=(float)sum/file_length*100;
+    float percent;
+    if(f_length==0){
+        sum=0;
+    }else{
+       sum=f_length;
+       lseek(fd,f_length,SEEK_SET);
+    }
+
     while((bytes_read=read(fd,file_buff,sizeof(file_buff)))>0){
         if(send(sockfd,file_buff,bytes_read,0)<0){
             perror("Failed to send file data");
@@ -284,9 +347,25 @@ void putsmall_send(int fd,int sockfd,int file_length){
     else{
         printf("上传文件成功\n");
     }
+    close(fd);
 }
 
 void putsbig_send(int fd,int sockfd, int file_length){
+       int f_length;
+       recv(sockfd,&f_length,sizeof(f_length),0);             
+       off_t p_length=(off_t)f_length;                        
+       int n=file_length-f_length;                            
+       while(n>0){
+       int r=sendfile(sockfd,fd,&p_length,n);                 
+       if(r==-1){
+           perror("sendfile failed:");                        
+           return;
+       }                                                                                                                                              
+       n=n-r;
+       }
+       if(n==0){
+           printf("大文件已经全部传输\n");                    
+       }
 
 }
 

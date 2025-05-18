@@ -2,7 +2,9 @@
 #define CLIENT_H
 #define _POSIX_C_SOURCE 200809L
 #define BUFFER_SIZE 4096
+#define _GNU_SOURCE
 #include<sys/types.h>
+#include<sys/sendfile.h>
 #include <netdb.h>
 #include<fcntl.h>
 #include<crypt.h>

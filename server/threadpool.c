@@ -1,9 +1,12 @@
 #include <sys/epoll.h>
+#include <sys/syslog.h>
+#include<syslog.h>
 #include<unistd.h>
 #include"threadpool.h"
 #include <bits/pthreadtypes.h>
 #include <pthread.h>
 #include <stdio.h>
+#include<syslog.h>
 #include <stdlib.h>
 #include"ser_main.h"
 
@@ -169,7 +172,7 @@ void handleMessage(int acc_fd,int epoll_fd,task_queue_t* que){
     int cmdType=-1;
     ret=recvn(acc_fd,epoll_fd,&cmdType,sizeof(cmdType));
     if(ret>0)
-    printf("recv cmd tyoe: %d \n\n",cmdType);
+    printf("recv cmd tyoe: %s\n\n",TypeToStr(cmdType));
 
     task_t* ptask= calloc(1,sizeof(task_t));
     ptask->epoll_fd=epoll_fd;
@@ -178,11 +181,13 @@ void handleMessage(int acc_fd,int epoll_fd,task_queue_t* que){
     if(length>0){
         ret=recvn(acc_fd,epoll_fd,ptask->data,length);
         if(ret>0){
-            if(ptask->type== COMMAND_PUTS){
+            if(ptask->type== COMMAND_PUTS||ptask->type== COMMAND_GETS){
                 DelEpollfd(ptask->epoll_fd,ptask->accept_fd);
             }
+            syslog(LOG_INFO,"操作类型：%s ,操作数据：%s 时间：%s",TypeToStr(ptask->type),ptask->data,getCurrentTime());
             taskEnque(que,ptask); } 
     }else if(length ==0){
+            syslog(LOG_INFO,"操作类型：%s ,操作数据：%s 时间: %s",TypeToStr(ptask->type),ptask->data,getCurrentTime());
             taskEnque(que,ptask);
     }
 

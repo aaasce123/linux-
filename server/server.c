@@ -2,6 +2,8 @@
 #include"ser_main.h"
 #include"threadpool.h"
 #include"socket_utils.h"
+#include <sys/syslog.h>
+#include<syslog.h>
 #include<signal.h>
 #include"config.h"
 #include<errno.h>
@@ -28,6 +30,7 @@ int main(int  argc, char *argv[]){
       return 0;
     }
     
+
    pipe(exitPipe);
    pid_t pid=fork();
 
@@ -54,7 +57,8 @@ int main(int  argc, char *argv[]){
    }
    threadpoolInit(pthreadpool,atoi((const char*)find(&ht,THREAD_NUM)));
    threadpoolStart(pthreadpool);
-
+   //打开日志文件
+    openlog("myserver",LOG_PID|LOG_PERROR,LOG_LOCAL0);
    char *ip_addr=(char*)find(&ht,IP);
    char* port=(char*)find(&ht,PORT);
    int listen_fd =ser_tcpinit(ip_addr,port);
@@ -84,7 +88,7 @@ int main(int  argc, char *argv[]){
                 printf("通信socket:%d\n",accept_fd);
                 my_error(accept_fd,-1,"accpet  ");
                 addEpollfd(epoll_fd,accept_fd,EPOLLIN|EPOLLET);
-
+                syslog(LOG_INFO,"建立链接socfd:%d 时间:%s ",accept_fd,getCurrentTime());
          }
            else if(fd == exitPipe[0]){
                printf("进入退出处理");

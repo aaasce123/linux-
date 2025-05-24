@@ -1,6 +1,5 @@
 #ifndef CLIENT_H
-#define CLIENT_H
-#define _POSIX_C_SOURCE 200809L
+#define CLIENT_H #define _POSIX_C_SOURCE 200809L
 #define BUFFER_SIZE 4096
 #define _GNU_SOURCE
 #include<sys/types.h>
@@ -27,6 +26,13 @@ typedef enum{
     TASK_LOGIN_SECTION2,
     TASK_LOGIN_SECTION2_RESP_OK,
     TASK_LOGIN_SECTION2_RESP_ERROR,
+
+    TASK_REGISTER1=200,
+    TASK_REGISTER1_RESP_OK,
+    TASK_REGISTER1_RESP_ERROR,
+    TASK_REGISTER2,
+    TASK_REGISTER2_RESP_OK,
+    TASK_REGISTER2_RESP_ERROR,
 }CmdType;
 
 typedef struct{
@@ -38,9 +44,12 @@ int cli_tcpinit(char* ip,char* port);
 CmdType Cmd_change(char* str);
 int frecv(int sockfd,void* buff,size_t length);
 int fsend(int sock,void* buff,size_t length);
+
 //命令接收
-void userLogin1(int sockfd,train_t* train);
-void userLogin2(int sockfd,train_t train);
+void userLogin1(int sockfd,train_t* train,char* username);
+void userLogin2(int sockfd,train_t* train,char* username);
+void userRegister1(int sockfd,train_t* train,char* username);
+void userRegister2(int sockfd,train_t* train,char* username);
 
 void client_recv(train_t train,int sockfd );
 void mkdir_recv(int sockfd);
@@ -57,5 +66,6 @@ void puts_send(train_t train,int sockfd);
 void putsmall_send(int fd,int sockfd,int file_length);
 void putsbig_send(int fd,int sockfd, int file_length);
 size_t recvn(int sockfd,void* buff, size_t lengtg,int nume);
+
 
 #endif

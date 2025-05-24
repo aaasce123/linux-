@@ -1,12 +1,11 @@
 #include "hashtable.h"
 #include"ser_main.h"
+#include"sql.h"
 #include"threadpool.h"
-#include"socket_utils.h"
 #include <sys/syslog.h>
 #include<syslog.h>
 #include<signal.h>
 #include"config.h"
-#include<errno.h>
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
@@ -62,7 +61,7 @@ int main(int  argc, char *argv[]){
    char *ip_addr=(char*)find(&ht,IP);
    char* port=(char*)find(&ht,PORT);
    int listen_fd =ser_tcpinit(ip_addr,port);
-
+   MYSQL* conn=mysql_db_con();
    
    listen(listen_fd,continue_wait_block);
     
@@ -104,7 +103,7 @@ int main(int  argc, char *argv[]){
                printf("\nchild process exit.\n");
                exit(0);
            }else{
-              handleMessage(fd,epoll_fd,&pthreadpool->que);
+              handleMessage(fd,epoll_fd,&pthreadpool->que,conn);
               //分析任务成功
                
            }

@@ -8,6 +8,7 @@
 #include<time.h>
 #include<fcntl.h>
 #include<sys/types.h>
+#include<mysql/mysql.h>
 #include<unistd.h>
 #include<stdio.h>
 #include <stddef.h>
@@ -30,13 +31,21 @@ typedef enum{
     TASK_LOGIN_SECTION2,
     TASK_LOGIN_SECTION2_RESP_OK,
     TASK_LOGIN_SECTION2_RESP_ERROR,
+
+    TASK_REGISTER1=200,
+    TASK_REGISTER1_RESP_OK,
+    TASK_REGISTER1_RESP_ERROR,
+    TASK_REGISTER2,
+    TASK_REGISTER2_RESP_OK,
+    TASK_REGISTER2_RESP_ERROR,
 }CmdType;
 //任务结点
 typedef struct task_s{
 CmdType type;
+MYSQL* conn;
 int epoll_fd;
  int accept_fd;
- char data[1024];
+ char data[256];
  struct task_s* pNext;
 }task_t;
 //任务节点，仅仅把任务信息传过去
@@ -54,9 +63,6 @@ void pthread_error(int ret,char* str);
 
 int frecv(int sockfd,void* buff,size_t length);
 int fsend(int sockfd,void* buff,size_t length);
-
-void Register();
-void Login();
 
 //命令
 void lsCommand(task_t* ptask,int sockfd); 

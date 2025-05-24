@@ -33,7 +33,7 @@ void splitString(char* str,const char* delim,char** outStrs,int maxToken,int* to
           outStrs[*tokenCount]=strdup(token);
           if(!outStrs[*tokenCount]){
               for(int i=0;i<*tokenCount;i++){
-                  free(outStrs);
+                  free(outStrs[i]);
                   outStrs[i]=NULL;
               }
           *tokenCount=0;

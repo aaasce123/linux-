@@ -163,7 +163,7 @@ void* threadFunc(void* arg){
 }
 
 //分析消息类型
-void handleMessage(int acc_fd,int epoll_fd,task_queue_t* que){
+void handleMessage(int acc_fd,int epoll_fd,task_queue_t* que,MYSQL* conn){
     int length= -1;
     int ret=recvn(acc_fd,epoll_fd,&length,sizeof(length));
     if(ret>0)
@@ -178,10 +178,11 @@ void handleMessage(int acc_fd,int epoll_fd,task_queue_t* que){
     ptask->epoll_fd=epoll_fd;
     ptask->accept_fd=acc_fd;
     ptask->type =cmdType;
+    ptask->conn=conn;
     if(length>0){
         ret=recvn(acc_fd,epoll_fd,ptask->data,length);
         if(ret>0){
-            if(ptask->type== COMMAND_PUTS||ptask->type== COMMAND_GETS){
+            if(ptask->type== COMMAND_PUTS||ptask->type== COMMAND_GETS||ptask->type==TASK_REGISTER1||ptask->type==TASK_REGISTER2){
                 DelEpollfd(ptask->epoll_fd,ptask->accept_fd);
             }
             syslog(LOG_INFO,"操作类型：%s ,操作数据：%s 时间：%s",TypeToStr(ptask->type),ptask->data,getCurrentTime());

@@ -39,6 +39,12 @@ const char* TypeToStr(CmdType cmd){
         case TASK_LOGIN_SECTION2: return "TASK_LOGIN_SECTION2";
         case TASK_LOGIN_SECTION2_RESP_OK: return "TASK_LOGIN_SECTION2_RESP_OK";
         case TASK_LOGIN_SECTION2_RESP_ERROR: return "TASK_LOGIN_SECTION2_RESP_ERROR";
+        case TASK_REGISTER1: return "TASK_REGISTER1";
+        case TASK_REGISTER1_RESP_ERROR: return"TASK_REGISTER1_RESP_ERROR";
+        case TASK_REGISTER1_RESP_OK: return"TASK_REGISTER1_RESP_OK";
+        case TASK_REGISTER2:  return"TASK_REGISTER2";
+        case TASK_REGISTER2_RESP_ERROR:return "TASK_REGISTER2_RESP_ERROR";
+        case TASK_REGISTER2_RESP_OK: return "TASK_REGISTER2_RESP_OK";
         default: return "UNKNOWN_COMMAND";
     }
 }
@@ -46,8 +52,7 @@ const char* TypeToStr(CmdType cmd){
 const char* getCurrentTime(){
     static char buf[25]; // 格式 "YYYY-MM-DD HH:MM:SS" 共19字符 + 1 '\0'
     time_t now = time(NULL);
-    struct tm* tm_now = localtime(&now);
-    if (tm_now) {
+    struct tm* tm_now = localtime(&now); if (tm_now) {
         strftime(buf, sizeof(buf), "%F %T", tm_now);
     } else {
         buf[0] = '\0'; // 出错时返回空字符串
@@ -98,10 +103,18 @@ void dotask(task_t* ptask){
         addEpollfd(ptask->epoll_fd,ptask->accept_fd,EPOLLIN|EPOLLET);
         break;
     case TASK_LOGIN_SECTION1:
-       TASK_check1(ptask); 
+        user_Login1(ptask);
        break;
     case TASK_LOGIN_SECTION2:
-       TASK_check2(ptask);
+        user_Login2(ptask);
+       break;
+    case TASK_REGISTER1:
+       user_Register1(ptask);
+       addEpollfd(ptask->epoll_fd,ptask->accept_fd,EPOLLIN|EPOLLET);
+       break;
+    case TASK_REGISTER2:
+        user_Register2(ptask);
+      addEpollfd(ptask->epoll_fd,ptask->accept_fd,EPOLLIN|EPOLLET);
        break;
     default:
         printf("还未开发其他操作\n");

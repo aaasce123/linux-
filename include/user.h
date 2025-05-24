@@ -15,24 +15,13 @@ typedef struct{
     char pwd[128];
 }user_info_t;
 
-typedef struct user_node{
-    user_info_t user;
-    struct user_node* next;
-}user_node_t;                                                      
 
-typedef struct{                                     
-     int len;                                        
-     CmdType type;                                   
-     char buff[1024];                                
- }train_t;     
 
-extern  user_node_t node_try;
-int loginCheck1(user_info_t* user);
-int loginCheck2(user_info_t* user,const char* encrypted);
-void TASK_check1(task_t* ptask);
-void TASK_check2(task_t* ptask);
+char* Rand_salt();
+void user_Register1(task_t* t);
+void user_Register2(task_t* t);
+void user_Login1(task_t* t);
+void user_Login2(task_t* t);
 void get_setting(char* setting,char* str);
 
-user_node_t* create_node();
-void insert_node(user_node_t** head , user_node_t* node);
 #endif

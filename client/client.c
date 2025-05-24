@@ -14,8 +14,9 @@ int main(int argc, char *argv[]){
 
   int client_fd=cli_tcpinit("192.168.230.130","8080");
   train_t train;
-  userLogin1(client_fd,&train);
-  userLogin2(client_fd,train);
+  char username[99];
+  userLogin1(client_fd,&train,username);
+  userLogin2(client_fd,&train,username);
   char train_command[COMMAND_MAX_LEN];
   
 

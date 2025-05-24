@@ -38,7 +38,7 @@ int threadpoolStop(threadpool_t* pthreadpool);
 void* threadFunc(void* arg);
 
 //分析任务类型
-void handleMessage(int acc_fd,int epoll_fd,task_queue_t* que);
+void handleMessage(int acc_fd,int epoll_fd,task_queue_t* que,MYSQL* conn);
 int  recvn(int sockfd,int epoll_fd,void* buff,size_t len);
 
 void dotask(task_t* ptask);

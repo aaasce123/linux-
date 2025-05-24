@@ -1,6 +1,7 @@
 #include"client.h"
 #include <fcntl.h>
 #include <stddef.h>
+#include <unistd.h>
 #include<string.h>
 #include<stdlib.h>
 #include<stdio.h>
@@ -22,62 +23,113 @@ int cli_tcpinit(char* ip,char* port){
   return client_fd;
 }
 
-void  userLogin1(int sockfd,train_t* t){
-   printf("userLogin1\n");
+void userRegister1(int sockfd,train_t* t,char* username){
+    while(1){
+    printf("请输入用户名字\n");
+    scanf("%s",t->buff);
+    t->len=strlen(t->buff)+1;
+    t->type=TASK_REGISTER1;
+    send(sockfd,t,8+t->len,0);
+    strncpy(username,t->buff,t->len);
+
+    memset(t,0,sizeof(train_t));
+    recv(sockfd,&t->type,sizeof(t->type),0);
+
+   if(t->type==TASK_REGISTER1_RESP_OK){
+       recv(sockfd,&t->len,sizeof(t->len),0);
+       recv(sockfd,t->buff,t->len,0);
+   }
+   else{
+       printf("用户名已存在,请重新输入\n");
+   }
+  }
+}
+void userRegister2(int sockfd,train_t* t,char* username){
+    train_t regi2=*t;
+   while(1){
+      *t=regi2;
+      char passwd[40];
+       printf("请输入密码:\n");
+       scanf("%s",passwd);
+      char* crypted= crypt(passwd, t->buff);
+      int name_len=strlen(username)+1;
+      int len=strlen(crypted)+1+name_len;
+      CmdType status=TASK_REGISTER2;
+      send(sockfd,&len,sizeof(len),0);
+      send(sockfd,&status,sizeof(status),0);
+
+      send(sockfd,username,name_len,0);
+      send(sockfd,crypted,len-name_len,0);
+
+      memset(t,0,sizeof(train_t));
+      recv(sockfd,&status,sizeof(status),0);
+      if(status==TASK_REGISTER2_RESP_OK){
+          printf("注册用户成功\n");
+          break;
+      }else{
+        printf("注册密码不符合要求\n");
+      }
+   }
+}
+
+void  userLogin1(int sockfd,train_t* t,char* username){
    memset(t,0,sizeof(train_t));
    while(1){
        printf("请输入用户名称:\n");
        scanf("%s",t->buff);
        t->type=TASK_LOGIN_SECTION1;
        t->len=strlen(t->buff)+1;
+      strncpy(username,t->buff,t->len);
        send(sockfd,&t->len,sizeof(t->len),0);
        send(sockfd,&t->type,sizeof(t->type),0);
        send(sockfd,t->buff,t->len,0);
 
       memset(t,0,sizeof(train_t));
-       recv(sockfd,&t->len,sizeof(t->len),0);
        recv(sockfd,&t->type,sizeof(t->type),0);
        if(t->type== TASK_LOGIN_SECTION1_RESP_ERROR){
-           printf("请重新输入用户名:\n");
+           printf("用户名不存在:\n");
            continue;
-       }
+       }else{
+       recv(sockfd,&t->len,sizeof(t->len),0);
        recv(sockfd,t->buff,t->len,0);
-       break;
+       break;}
    }
    return ;
 }
 
-void userLogin2(int sockfd, train_t t){
+void userLogin2(int sockfd, train_t* t,char* username){
    printf("userLogin2.\n");
-   train_t pt=t;
+   train_t pt=*t;
    while(1){
-       t=pt;
+          *t=pt;
           printf("请输入密码:\n");
           char passwd[20];
           scanf("%s",passwd);
-          char* encrtyped=crypt(passwd,t.buff);
-          t.len=strlen(encrtyped)+1;
-          t.type=TASK_LOGIN_SECTION2;
-          strncpy(t.buff,encrtyped,t.len);
+          char* encrtyped=crypt(passwd,t->buff);
+          int name_len=strlen(username)+1;
+          t->len=name_len+strlen(encrtyped)+1;
+          t->type=TASK_LOGIN_SECTION2;
+          strncpy(t->buff,encrtyped,t->len);
 
-          send(sockfd,&t.len,sizeof(t.len),0);
-          send(sockfd,&t.type,sizeof(t.type),0);
-          send(sockfd,t.buff,t.len,0);
+          send(sockfd,&t->len,sizeof(t->len),0);
+          send(sockfd,&t->type,sizeof(t->type),0);
+          
+          send(sockfd,username,name_len,0);
+          send(sockfd,t->buff,t->len-name_len,0);
            
-          memset(&t,0,sizeof(train_t));
-          recv(sockfd,&t.len,4,0);
-          recv(sockfd,&t.type,4,0);
-          if(t.type==TASK_LOGIN_SECTION2_RESP_ERROR){
+          memset(t,0,sizeof(train_t));
+          recv(sockfd,&t->type,4,0);
+          if(t->type==TASK_LOGIN_SECTION2_RESP_ERROR){
               printf("sorry,密码不正确:\n");
               continue;
-          }
-          recv(sockfd,t.buff,t.len,0);
-          printf("Login success:当前目录:%s\n",t.buff);
-          break;
-   }
-   return;
+           }else{
+               recv(sockfd,&t->len,sizeof(t->len),0);
+               recv(sockfd,&t->buff,t->len,0);
+               printf("%s\n",t->buff);
+               return ;
+           }
+ }
 }
-
 CmdType Cmd_change(char* str){
     if(strcmp(str,"ls")==0)
         return COMMAND_LS;

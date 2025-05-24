@@ -58,11 +58,12 @@ mysql_free_result(result);
 void user_Register2(task_t* t){
     MYSQL* conn =t->conn;
     char* username=t->data;
-    char* cryptpassed=t->data+strlen(username)+1;
+    char* passwd=t->data+strlen(username)+1;
+    char* cryptpassed=t->data+strlen(username)+1+strlen(passwd)+1;
 
     char query[256];
-   snprintf(query,sizeof(query),"Insert into user (username,cryptpasswd,pwd)"
-                                  "values('%s','%s','../')",username,cryptpassed);                                 
+   snprintf(query,sizeof(query),"Insert into user (username,cryptpasswd,pwd,passwd)"
+                                  "values('%s','%s','../','%s')",username,cryptpassed,passwd);                                 
     if(mysql_query(conn,query)){
         CmdType status=TASK_REGISTER2_RESP_ERROR;
         send(t->accept_fd,&status,sizeof(status),0);

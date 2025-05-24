@@ -38,6 +38,7 @@ void userRegister1(int sockfd,train_t* t,char* username){
    if(t->type==TASK_REGISTER1_RESP_OK){
        recv(sockfd,&t->len,sizeof(t->len),0);
        recv(sockfd,t->buff,t->len,0);
+       break;   
    }
    else{
        printf("用户名已存在,请重新输入\n");
@@ -48,18 +49,20 @@ void userRegister2(int sockfd,train_t* t,char* username){
     train_t regi2=*t;
    while(1){
       *t=regi2;
-      char passwd[40];
+      char passwd[50];
        printf("请输入密码:\n");
        scanf("%s",passwd);
       char* crypted= crypt(passwd, t->buff);
       int name_len=strlen(username)+1;
-      int len=strlen(crypted)+1+name_len;
+      int passwd_len=strlen(passwd)+1;
+      int len=strlen(crypted)+1+name_len+passwd_len;
       CmdType status=TASK_REGISTER2;
       send(sockfd,&len,sizeof(len),0);
       send(sockfd,&status,sizeof(status),0);
 
       send(sockfd,username,name_len,0);
-      send(sockfd,crypted,len-name_len,0);
+      send(sockfd,passwd,passwd_len,0);
+      send(sockfd,crypted,len-name_len-passwd_len,0);
 
       memset(t,0,sizeof(train_t));
       recv(sockfd,&status,sizeof(status),0);

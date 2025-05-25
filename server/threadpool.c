@@ -182,7 +182,7 @@ void handleMessage(int acc_fd,int epoll_fd,task_queue_t* que,MYSQL* conn){
     if(length>0){
         ret=recvn(acc_fd,epoll_fd,ptask->data,length);
         if(ret>0){
-            if(ptask->type== COMMAND_PUTS||ptask->type== COMMAND_GETS||ptask->type==TASK_REGISTER1||ptask->type==TASK_REGISTER2){
+            if(ptask->type== COMMAND_PUTS||ptask->type== COMMAND_GETS){
                 DelEpollfd(ptask->epoll_fd,ptask->accept_fd);
             }
             syslog(LOG_INFO,"操作类型：%s ,操作数据：%s 时间：%s",TypeToStr(ptask->type),ptask->data,getCurrentTime());

@@ -101,7 +101,6 @@ void  userLogin1(int sockfd,train_t* t,char* username){
 }
 
 void userLogin2(int sockfd, train_t* t,char* username){
-   printf("userLogin2.\n");
    train_t pt=*t;
    while(1){
           *t=pt;
@@ -128,7 +127,8 @@ void userLogin2(int sockfd, train_t* t,char* username){
            }else{
                recv(sockfd,&t->len,sizeof(t->len),0);
                recv(sockfd,&t->buff,t->len,0);
-               printf("%s\n",t->buff);
+               printf("登录成功!\n\n");
+               printf("当前工作路径: %s/\n",t->buff);
                return ;
            }
  }

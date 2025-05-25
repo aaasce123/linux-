@@ -63,7 +63,7 @@ void user_Register2(task_t* t){
 
     char query[256];
    snprintf(query,sizeof(query),"Insert into user (username,cryptpasswd,pwd,passwd)"
-                                  "values('%s','%s','../','%s')",username,cryptpassed,passwd);                                 
+                                  "values('%s','%s','%s','%s')",username,cryptpassed,username,passwd);                                 
     if(mysql_query(conn,query)){
         CmdType status=TASK_REGISTER2_RESP_ERROR;
         send(t->accept_fd,&status,sizeof(status),0);
@@ -71,6 +71,17 @@ void user_Register2(task_t* t){
         return;
        }
     else{
+        int new_user_id=(int)mysql_insert_id(conn);
+    snprintf(query,sizeof(query),"INSERT INTO file_table (parent_id,filename,owner_id,sha1, filesize,type)"
+                                 "VALUES(0,'%s','%d','',0,'目录' )",username,new_user_id);                                
+
+     if(mysql_query(conn,query)){                                                          
+            CmdType status=TASK_REGISTER2_RESP_ERROR;                                        
+            send(t->accept_fd,&status,sizeof(status),0);                                     
+            fprintf(stderr,"Register2 intsert file_table failed :%s\n",mysql_error(conn));                      
+            return;                                                                          
+               }          
+
        CmdType status=TASK_REGISTER2_RESP_OK;
        send(t->accept_fd,&status,sizeof(status),0);
        }

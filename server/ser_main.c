@@ -110,11 +110,9 @@ void dotask(task_t* ptask){
        break;
     case TASK_REGISTER1:
        user_Register1(ptask);
-       addEpollfd(ptask->epoll_fd,ptask->accept_fd,EPOLLIN|EPOLLET);
        break;
     case TASK_REGISTER2:
         user_Register2(ptask);
-      addEpollfd(ptask->epoll_fd,ptask->accept_fd,EPOLLIN|EPOLLET);
        break;
     default:
         printf("还未开发其他操作\n");

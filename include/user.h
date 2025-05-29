@@ -2,20 +2,7 @@
 #define USER_H
 #include<shadow.h>
 #include"ser_main.h"
-typedef enum{
-    STATUS_LOGOFF,
-    STATUS_LOGIN
-}LoginStatus;
-
-typedef struct{
-    int sockfd;
-    LoginStatus status;
-    char name[20];
-    char encrypted[100];
-    char pwd[128];
-}user_info_t;
-
-
+#include"session.h"
 
 char* Rand_salt();
 void user_Register1(task_t* t);

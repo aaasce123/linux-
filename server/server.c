@@ -1,5 +1,6 @@
 #include "hashtable.h"
 #include"ser_main.h"
+#include "session.h"
 #include"sql.h"
 #include"threadpool.h"
 #include <sys/syslog.h>
@@ -58,6 +59,7 @@ int main(int  argc, char *argv[]){
    threadpoolStart(pthreadpool);
    //打开日志文件
     openlog("myserver",LOG_PID|LOG_PERROR,LOG_LOCAL0);
+    session_init();
    char *ip_addr=(char*)find(&ht,IP);
    char* port=(char*)find(&ht,PORT);
    int listen_fd =ser_tcpinit(ip_addr,port);
@@ -76,8 +78,6 @@ int main(int  argc, char *argv[]){
       while(1){
        int nready = epoll_wait(epoll_fd,events,MAX_EVENTS,-1);
        //收到中断信号
-
-      
 
          for(int i=0;i<nready;i++){
           int fd=events[i].data.fd;

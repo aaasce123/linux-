@@ -164,15 +164,17 @@ void* threadFunc(void* arg){
 
 //分析消息类型
 void handleMessage(int acc_fd,int epoll_fd,task_queue_t* que,MYSQL* conn){
+
+    int cmdType=-1;
+    int ret=recvn(acc_fd,epoll_fd,&cmdType,sizeof(cmdType));
+    if(ret>0)
+    printf("recv cmd tyoe: %s\n\n",TypeToStr(cmdType));
+
     int length= -1;
-    int ret=recvn(acc_fd,epoll_fd,&length,sizeof(length));
+    ret=recvn(acc_fd,epoll_fd,&length,sizeof(length));
     if(ret>0)
     printf("recv: %d length\n",length);
 
-    int cmdType=-1;
-    ret=recvn(acc_fd,epoll_fd,&cmdType,sizeof(cmdType));
-    if(ret>0)
-    printf("recv cmd tyoe: %s\n\n",TypeToStr(cmdType));
 
     task_t* ptask= calloc(1,sizeof(task_t));
     ptask->epoll_fd=epoll_fd;

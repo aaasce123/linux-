@@ -27,7 +27,7 @@ srand(time(NULL));
 }
 void user_Register1(task_t* t){
     MYSQL* conn =t->conn;
-    char query[256];
+    char query[512];
    snprintf(query,sizeof(query),"select id from user where username='%s'",t->data);
    if(mysql_query(conn,query)){
        fprintf(stderr,"Register1 failed:%s\n",mysql_error(conn));
@@ -63,7 +63,7 @@ void user_Register2(task_t* t){
 
     char query[256];
    snprintf(query,sizeof(query),"Insert into user (username,cryptpasswd,pwd,passwd)"
-                                  "values('%s','%s','%s','%s')",username,cryptpassed,username,passwd);                                 
+                                  "values('%s','%s','/%s/','%s')",username,cryptpassed,username,passwd);                                 
     if(mysql_query(conn,query)){
         CmdType status=TASK_REGISTER2_RESP_ERROR;
         send(t->accept_fd,&status,sizeof(status),0);
@@ -71,6 +71,8 @@ void user_Register2(task_t* t){
         return;
        }
     else{
+     char path[100];
+     sprintf(path,"./user_people/%s",username);
         int new_user_id=(int)mysql_insert_id(conn);
     snprintf(query,sizeof(query),"INSERT INTO file_table (parent_id,filename,owner_id,sha1, filesize,type)"
                                  "VALUES(0,'%s','%d','',0,'目录' )",username,new_user_id);                                
@@ -81,6 +83,7 @@ void user_Register2(task_t* t){
             fprintf(stderr,"Register2 intsert file_table failed :%s\n",mysql_error(conn));                      
             return;                                                                          
                }          
+     mkdir(path,0755);
 
        CmdType status=TASK_REGISTER2_RESP_OK;
        send(t->accept_fd,&status,sizeof(status),0);
@@ -88,7 +91,7 @@ void user_Register2(task_t* t){
 }
 void user_Login1(task_t* t){
        MYSQL* conn =t->conn;                                                   
-       char query[256];
+       char query[512];
        snprintf(query,sizeof(query),"select * from user where username='%s'",t->data);
        if(mysql_query(conn,query)){
            fprintf(stderr,"Login1 failed:%s\n",mysql_error(conn));
@@ -116,6 +119,7 @@ void user_Login1(task_t* t){
        }
 mysql_free_result(result);
 }
+
 void user_Login2(task_t* t){
            MYSQL* conn =t->conn;
     char* username=t->data;
@@ -134,10 +138,19 @@ void user_Login2(task_t* t){
            MYSQL_ROW row;
            row=mysql_fetch_row(result);
            if(strcmp(cryptpassed,row[2])==0){
+
+            if(session_add(t->accept_fd,username,row[3])!=0){
+               fprintf(stderr,"用户状态添加失败\n");
+               CmdType status=TASK_LOGIN_SECTION2_RESP_ERROR;
+               send(t->accept_fd,&status,sizeof(status),0);
+               mysql_free_result(result);
+               return;  
+               }
+
             CmdType status=TASK_LOGIN_SECTION2_RESP_OK;
             send(t->accept_fd,&status,sizeof(status),0);
             
-            int len=strlen(row[3]);
+            int len=strlen(row[3])+1;
             send(t->accept_fd,&len,sizeof(len),0);
             send(t->accept_fd,row[3],len,0);
            }else{

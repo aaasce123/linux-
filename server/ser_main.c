@@ -435,24 +435,17 @@ void removeCommand(task_t* ptask) {
     }
 
     // 尝试删除文件或目录
-    int ret = -1;
-    if (strcmp(type, "普通文件") == 0) {
-        ret = unlink(real_path);
-    } else if (strcmp(type, "目录") == 0) {
+     if (strcmp(type, "目录") == 0) {
+        int ret = -1;
         ret = rmdir(real_path); // 注意目录需为空，否则失败
-    } else {
-        fprintf(stderr, "未知类型: %s\n", type);
-        CmdType status = COMMAND_ERROR;
-        send(ptask->accept_fd, &status, sizeof(status), 0);
-        return;
-    }
-
-    if (ret == -1) {
+      if (ret == -1) {
         perror("删除失败");
         CmdType status = COMMAND_ERROR;
         send(ptask->accept_fd, &status, sizeof(status), 0);
         return;
     }
+    } 
+
 
     // 删除数据库记录
     int owner_id = get_owner_id(user->username, ptask->conn);
@@ -518,10 +511,18 @@ void removeCommand(task_t* ptask) {
            snprintf(virtual_path, sizeof(virtual_path), "%s/%s", user->current_path, ptask->data);
        }
   
+       char filename[256] = {0};
+       char* last_slash = strrchr(ptask->data, '/');
+       if (last_slash != NULL) {
+       snprintf(filename, sizeof(filename), "%s", last_slash + 1); // 截取最后一个 '/' 后的内容
+      } else {
+       snprintf(filename, sizeof(filename), "%s", ptask->data);    // 没有 '/'，说明本身就是文件名
+      }
+
 
 
         char real_path[1024] = {0};
-        snprintf(real_path, sizeof(real_path), "/home/cccbiji/linux-/server/user_people%s", virtual_path);
+        snprintf(real_path, sizeof(real_path), "/home/cccbiji/linux-/server/server_download/%s",filename);
 
          int file_fd = open(real_path, O_RDONLY);
         CmdType status;
@@ -535,9 +536,9 @@ void removeCommand(task_t* ptask) {
         send(ptask->accept_fd, &status, sizeof(status), 0);
 
         // 发送文件名长度和内容
-        int file_name_length = strlen(ptask->data) + 1;
+        int file_name_length = strlen(filename) + 1;
         send(ptask->accept_fd, &file_name_length, sizeof(file_name_length), 0);
-        send(ptask->accept_fd, ptask->data, file_name_length, 0);
+        send(ptask->accept_fd, filename, file_name_length, 0);
         // 发送文件长度
         struct stat file_stat;
         fstat(file_fd, &file_stat);
@@ -622,12 +623,11 @@ void removeCommand(task_t* ptask) {
             send(ptask->accept_fd, &status, sizeof(status), 0);
             return;
         }
-
-        char virtual_path[512] = {0};
-        snprintf(virtual_path, sizeof(virtual_path), "%s/%s", user->current_path, ptask->data);
+         char virtual_path[512] = {0};
+          snprintf(virtual_path, sizeof(virtual_path), "%s/%s", user->current_path, ptask->data);
 
         char real_path[1024] = {0};
-        snprintf(real_path, sizeof(real_path), "/home/cccbiji/linux-/server/user_people%s", virtual_path);
+        snprintf(real_path, sizeof(real_path), "/home/cccbiji/linux-/server/server_download/%s",ptask->data);
 
         CmdType status;
 
@@ -670,15 +670,18 @@ void removeCommand(task_t* ptask) {
                     perror("recv file_length failed");
                     return;
                 }
-
+                 int ret=-1;
                 // 根据文件大小选择接收函数
                 if (file_length > 100 * 1024 * 1024) { // >100MB
-                    putsbig_recv(real_path, user, file_length);
+                   ret= putsbig_recv(real_path, user, file_length);
                 } else {
-                    putsmall_recv(real_path, user, file_length);
+                  ret= putsmall_recv(real_path, user, file_length);
                 }
-
+                if(ret ==0)
                 insert_file_metadata(ptask,virtual_path,real_path,sha1,filename,file_length);
+                else{
+                    fprintf(stderr, "文件上传失败，保留部分数据以支持断点续传\n");
+                }
         
             } else {
                 // 秒传文件，文件长度从数据库获取（可选）
@@ -840,48 +843,38 @@ void insert_file_metadata_speed(task_t* ptask, char* filename, char* virtual_pat
     }
 
 
-    void putsmall_recv(char* filename, session_t* user, int file_length) {
-        int file_fd = open(filename, O_RDWR | O_CREAT, 0755);
-        if (file_fd < 0) {
-            perror("open");
-            return;
-        }
+int putsmall_recv(char* filename, session_t* user, int file_length) {
+    int file_fd = open(filename, O_RDWR | O_CREAT, 0755);
+    if (file_fd < 0) {
+        perror("open");
+        return -1;
+    }
 
-        struct stat file_buff;
-        if (fstat(file_fd, &file_buff) < 0) {
-            perror("fstat");
-            close(file_fd);
-            return;
-        }
+    struct stat file_buff;
+    if (fstat(file_fd, &file_buff) < 0) {
+        perror("fstat");
+        close(file_fd);
+        return -1;
+    }
 
-        int f_length = file_buff.st_size;
-        // 发送已接收文件大小给客户端，实现断点续传
-        if (send(user->sockfd, &f_length, sizeof(f_length), 0) < 0) {
-            perror("send");
-            close(file_fd);
-            return;
-        }
+    int f_length = file_buff.st_size;
+    // 发送已接收文件大小给客户端，实现断点续传
+    if (send(user->sockfd, &f_length, sizeof(f_length), 0) < 0) {
+        perror("send");
+        close(file_fd);
+        return -1;
+    }
 
-        char data[BUFFER_SIZE];
-        int sum = 0;
-        int r;
-        float percent = 0.0f;
+    char data[BUFFER_SIZE];
+    int sum = f_length;
+    int r;
+    float percent = 0.0f;
 
-        if (f_length == 0) {
-            // 新文件，预分配文件大小
-            if (ftruncate(file_fd, file_length) < 0) {
-                perror("ftruncate");
-                close(file_fd);
-                return;
-            }
-        } else {
-        // 续传，文件指针移动到当前大小位置
-        sum = f_length;
-        if (lseek(file_fd, f_length, SEEK_SET) < 0) {
-            perror("lseek");
-            close(file_fd);
-            return;
-        }
+    // 文件指针移动到当前大小位置
+    if (lseek(file_fd, f_length, SEEK_SET) < 0) {
+        perror("lseek");
+        close(file_fd);
+        return -1;
     }
 
     while (sum < file_length) {
@@ -903,28 +896,29 @@ void insert_file_metadata_speed(task_t* ptask, char* filename, char* virtual_pat
         fflush(stdout);
     }
 
+    close(file_fd);
+
     if (sum == file_length) {
         printf("\n文件接收完成！\n");
+        return 0;
     } else {
         fprintf(stderr, "\n文件接收未完成，期望: %d, 实际: %d\n", file_length, sum);
+        return -1;
     }
-
-    close(file_fd);
 }
 
-
-void putsbig_recv(char* filename, session_t* user, int file_length) {
+int putsbig_recv(char* filename, session_t* user, int file_length) {
     int file_fd = open(filename, O_RDWR | O_CREAT, 0775);
     if (file_fd < 0) {
         perror("open");
-        return;
+        return -1;
     }
 
     struct stat file_buff;
     if (fstat(file_fd, &file_buff) < 0) {
         perror("fstat");
         close(file_fd);
-        return;
+        return -1;
     }
 
     int f_length = file_buff.st_size;
@@ -933,14 +927,14 @@ void putsbig_recv(char* filename, session_t* user, int file_length) {
     if (send(user->sockfd, &f_length, sizeof(f_length), 0) < 0) {
         perror("send");
         close(file_fd);
-        return;
+        return -1;
     }
 
     int pipefd[2];
     if (pipe(pipefd) < 0) {
         perror("pipe");
         close(file_fd);
-        return;
+        return -1;
     }
 
     int n = file_length - f_length;  // 还需接收的字节数
@@ -956,6 +950,7 @@ void putsbig_recv(char* filename, session_t* user, int file_length) {
             break;
         }
         if (r == 0) { // 对端关闭连接
+            fprintf(stderr, "对端关闭连接\n");
             break;
         }
 
@@ -966,29 +961,35 @@ void putsbig_recv(char* filename, session_t* user, int file_length) {
             int w = splice(pipefd[0], NULL, file_fd, &offset, to_write, SPLICE_F_MORE);
             if (w == -1) {
                 perror("splice pipe->file");
-                break;
+                goto cleanup;
             }
             to_write -= w;
         }
 
         if (to_write > 0) {
             // 写入不完整，跳出循环
+            fprintf(stderr, "写入文件不完整\n");
             break;
         }
 
         n -= r;
     }
 
+cleanup:
     close(pipefd[0]);
     close(pipefd[1]);
     close(file_fd);
 
     if (n == 0) {
         printf("文件全部接收\n");
+        return 0;
     } else {
-        printf("文件传输未完成，剩余 %d 字节\n", n);
+        fprintf(stderr, "文件传输未完成，剩余 %d 字节\n", n);
+        return -1;
     }
-} 
+}
+
+
 
 void DelEpollfd(int epfd,int fd){
     if(epoll_ctl(epfd,EPOLL_CTL_DEL,fd,NULL)==-1){

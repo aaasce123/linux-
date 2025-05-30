@@ -126,13 +126,20 @@ void Cmd_mkdir(int sockfd){
 void Cmd_puts(int sockfd){
     char buff[100];
     scanf("%s",buff);
+      char* filename = strrchr(buff, '/');
+    if (filename != NULL) {
+        filename++;  
+    } else {
+        filename = buff;  
+    }
+
     CmdType type=COMMAND_PUTS;
     int len=strlen(buff)+1;
     send(sockfd,&type,sizeof(type),0);
     send(sockfd,&len,sizeof(len),0);
     send(sockfd,buff,len,0);
 
-    puts_send(buff,sockfd);
+    puts_send(filename,sockfd);
 
 }
 

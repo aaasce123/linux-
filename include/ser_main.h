@@ -79,8 +79,8 @@ void mkdirCommand(task_t* ptask);
 void removeCommand(task_t* ptask);
 //上传文件
 void putsCommand(task_t* ptask);
-void putsbig_recv(char* filename,session_t* user,int file_length);
-void putsmall_recv(char* filename,session_t* user,int file_length);
+int putsbig_recv(char* filename,session_t* user,int file_length);
+int  putsmall_recv(char* filename,session_t* user,int file_length);
 
 void insert_file_metadata(task_t* ptask,char* virtual, char* full_path,const char* sha1, const char* filename,int file_length);
 int check_file_exists(const char* sha1,task_t* patsk);

@@ -3,6 +3,8 @@
 #include "session.h"
 #include"sql.h"
 #include"threadpool.h"
+#include <bits/pthreadtypes.h>
+#include <pthread.h>
 #include <sys/syslog.h>
 #include<syslog.h>
 #include<signal.h>
@@ -67,7 +69,14 @@ int main(int  argc, char *argv[]){
    
    listen(listen_fd,continue_wait_block);
     
-   printf("打开连接\n");
+   printf("短命令池打开连接\n");
+
+   pthread_t tid;
+   int ret = pthread_create(&tid, NULL, server_down_thread, &exitPipe[0]);
+    if (ret != 0) {
+        fprintf(stderr, "下载线程池pthread_create失败\n");
+        exit(EXIT_FAILURE);
+    }
      //epoll处理listen
     int epoll_fd = epoll_create1(0);
     my_error(epoll_fd,-1,"epoll_create1 failed");
@@ -90,7 +99,7 @@ int main(int  argc, char *argv[]){
                 syslog(LOG_INFO,"建立链接socfd:%d 时间:%s ",accept_fd,getCurrentTime());
          }
            else if(fd == exitPipe[0]){
-               printf("进入退出处理");
+               printf("短命令池进入退出处理\n");
                //线程池退出
                int howmany= 0;
                read(exitPipe[0],&howmany,sizeof(howmany));
@@ -101,6 +110,7 @@ int main(int  argc, char *argv[]){
                close(epoll_fd);
                close(exitPipe[0]);
                printf("\nchild process exit.\n");
+               fflush(stdout);
                exit(0);
            }else{
               handleMessage(fd,epoll_fd,&pthreadpool->que,conn);
@@ -108,5 +118,5 @@ int main(int  argc, char *argv[]){
                
            }
        }
-     
-}} 
+} } 
+

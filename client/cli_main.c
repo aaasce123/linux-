@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <unistd.h>
 #include<string.h>
+#include<pthread.h>
 #include<stdlib.h>
 #include<stdio.h>
 #include <sys/socket.h>
@@ -55,10 +56,10 @@ void Command(char* str,int sockfd){
           Cmd_mkdir(sockfd);
           break;
       case COMMAND_PUTS:
-          Cmd_puts(sockfd);
+          Cmd_puts();
           break;
       case COMMAND_GETS:
-          Cmd_gets(sockfd);    
+          Cmd_gets();    
           break;
       case COMMAND_NOT:
           printf("输入的命令有误请重新输入\n");
@@ -123,41 +124,104 @@ void Cmd_mkdir(int sockfd){
     
 }
 
-void Cmd_puts(int sockfd){
-    char buff[100];
-    scanf("%s",buff);
-      char* filename = strrchr(buff, '/');
+void* thread_puts(void* arg) {
+    char *buff = (char *)arg;
+
+    char *filename = strrchr(buff, '/');
     if (filename != NULL) {
-        filename++;  
+        filename++;
     } else {
-        filename = buff;  
+        filename = buff;
     }
 
-    CmdType type=COMMAND_PUTS;
-    int len=strlen(buff)+1;
-    send(sockfd,&type,sizeof(type),0);
-    send(sockfd,&len,sizeof(len),0);
-    send(sockfd,buff,len,0);
+    int sockfd = cli_tcpinit("192.168.230.130", "9999");
+    if (sockfd < 0) {
+        printf("连接服务器失败\n");
+        free(buff);
+        pthread_exit(NULL);
+    }
 
-    puts_send(filename,sockfd);
+    CmdType type = COMMAND_PUTS;
+    int len = strlen(buff) + 1;
 
+    send(sockfd, &type, sizeof(type), 0);
+    send(sockfd, &len, sizeof(len), 0);
+    send(sockfd, buff, len, 0);
+
+    puts_send(filename, sockfd);
+
+    close(sockfd);
+    free(buff);  // 释放线程参数
+    pthread_exit(NULL);
 }
 
-void Cmd_gets(int sockfd){
-    char buff[100];
-    scanf("%s",buff);
-    CmdType type=COMMAND_GETS;
-    int len=strlen(buff)+1;
-    send(sockfd,&type,sizeof(type),0);
-    send(sockfd,&len,sizeof(len),0);
-    send(sockfd,buff,len,0);
+void Cmd_puts() {
+    char input[100];
+    scanf("%s", input);
+
+    // 动态复制参数给线程
+    char *arg = strdup(input);
+    if (arg == NULL) {
+        printf("内存分配失败\n");
+        return;
+    }
+
+    pthread_t tid;
+    int ret = pthread_create(&tid, NULL, thread_puts, arg);
+    if (ret != 0) {
+        printf("线程创建失败，错误码：%d\n", ret);
+        free(arg);
+        return;
+    }
+    printf("上传线程:%ld已结束\n",tid);
+
+    pthread_detach(tid);  // 自动回收线程资源
+}
+
+void* thread_gets(void* arg) {
+    char *filename = (char *)arg;
+
+    CmdType type = COMMAND_GETS;
+    int sockfd = cli_tcpinit("192.168.230.130", "9999");
+    if (sockfd < 0) {
+        printf("连接服务器失败\n");
+        free(filename);
+        pthread_exit(NULL);
+    }
+
+    int len = strlen(filename) + 1;
+    send(sockfd, &type, sizeof(type), 0);
+    send(sockfd, &len, sizeof(len), 0);
+    send(sockfd, filename, len, 0);
 
     gets_recv(sockfd);
+
+    close(sockfd);
+    free(filename);  // 回收传入参数
+    pthread_exit(NULL);
 }
 
+void Cmd_gets() {
+    char input[100];
+    scanf("%s", input);
 
+    char *arg = strdup(input);
+    if (arg == NULL) {
+        printf("内存分配失败\n");
+        return;
+    }
 
+    pthread_t tid;
+    int ret = pthread_create(&tid, NULL, thread_gets, arg);
+    if (ret != 0) {
+        printf("线程创建失败，错误码：%d\n", ret);
+        free(arg);
+        return;
+    }
 
+    printf("下载线程:%ld已结束\n",tid);
+    pthread_detach(tid);
+}
 
 
 void userRegister1(int sockfd,train_t* t,char* username){
@@ -816,3 +880,5 @@ void file_to_sha1(const char* filename,char sha1_str[SHA1_STR_LEN]){
        sha1_str[SHA1_STR_LEN-1]='\0';
     }
     
+
+

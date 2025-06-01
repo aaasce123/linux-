@@ -77,6 +77,8 @@ void lsCommand(task_t* ptask);
 void cdCommand(task_t* ptask);
 void mkdirCommand(task_t* ptask);
 void removeCommand(task_t* ptask);
+
+void server_down();
 //上传文件
 void putsCommand(task_t* ptask);
 int putsbig_recv(char* filename,session_t* user,int file_length);
@@ -89,4 +91,6 @@ void insert_file_metadata_speed(task_t* ptask,char* filename,char* virtual, char
 void getsCommand(task_t* ptaskd);
 void getsmallfile(int fd, int sockfd,int file_length);
 void getsbigfile(int fd,int sockfd,int file_length);
+
+void server_down(int exitPipe);
 #endif

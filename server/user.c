@@ -63,7 +63,7 @@ void user_Register2(task_t* t){
 
     char query[256];
    snprintf(query,sizeof(query),"Insert into user (username,cryptpasswd,pwd,passwd)"
-                                  "values('%s','%s','/%s/','%s')",username,cryptpassed,username,passwd);                                 
+                                  "values('%s','%s','/%s','%s')",username,cryptpassed,username,passwd);                                 
     if(mysql_query(conn,query)){
         CmdType status=TASK_REGISTER2_RESP_ERROR;
         send(t->accept_fd,&status,sizeof(status),0);

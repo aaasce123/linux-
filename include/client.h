@@ -57,8 +57,10 @@ void Cmd_ls(int sockfd);
 void Cmd_cd(int sockfd);
 void Cmd_rm(int sockfd); 
 void Cmd_mkdir(int sockfd);
-void Cmd_puts(int sockfd);
-void Cmd_gets(int sockfd);
+void* thread_puts(void* arg);
+void* thread_gets(void* arg);
+void Cmd_puts();
+void Cmd_gets();
 
 
 int frecv(int sockfd,void* buff,size_t length);

@@ -1,7 +1,9 @@
 #include"ser_main.h"
 #include <bits/pthreadtypes.h>
+#include<syslog.h>
 #include "session.h"
 #include "sha1.h"
+#include "threadpool.h"
 #include"user.h"
 #include <fcntl.h>
 #include <stdint.h>
@@ -961,7 +963,7 @@ int putsbig_recv(char* filename, session_t* user, int file_length) {
             int w = splice(pipefd[0], NULL, file_fd, &offset, to_write, SPLICE_F_MORE);
             if (w == -1) {
                 perror("splice pipe->file");
-                goto cleanup;
+                break;
             }
             to_write -= w;
         }
@@ -975,7 +977,6 @@ int putsbig_recv(char* filename, session_t* user, int file_length) {
         n -= r;
     }
 
-cleanup:
     close(pipefd[0]);
     close(pipefd[1]);
     close(file_fd);
@@ -996,5 +997,4 @@ void DelEpollfd(int epfd,int fd){
         perror("epoll DEL failed ");
  }
 }
-
 

@@ -7,6 +7,7 @@
 #include "user.h"
 #include<mysql/mysql.h>
 #include <sys/socket.h>
+#include"jwt_token.h"
 #include"sql.h"
 
 char* Rand_salt(){
@@ -147,12 +148,16 @@ void user_Login2(task_t* t){
                return;  
                }
 
-            CmdType status=TASK_LOGIN_SECTION2_RESP_OK;
-            send(t->accept_fd,&status,sizeof(status),0);
-            
-            int len=strlen(row[3])+1;
-            send(t->accept_fd,&len,sizeof(len),0);
-            send(t->accept_fd,row[3],len,0);
+           char* token = jwt_token(row[0], username, 0, 3000);
+           if (token != NULL) {
+          CmdType status=TASK_LOGIN_SECTION2_RESP_OK;
+          send(t->accept_fd,&status,sizeof(status),0);
+          int len = strlen(token) + 1;
+          send(t->accept_fd, &len, sizeof(len), 0);
+          send(t->accept_fd, token, len, 0);
+          free(token);  // 发送完成后释放内存
+   }
+
            }else{
                CmdType status=TASK_LOGIN_SECTION2_RESP_ERROR;
                send(t->accept_fd,&status,sizeof(status),0);

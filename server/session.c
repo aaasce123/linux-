@@ -43,6 +43,23 @@ session_t* session_user(int sockfd){
     return NULL;
 }
 
+session_t* session_user_by_name(const char* username) {
+    if (username == NULL) {
+        return NULL;
+    }
+
+    pthread_mutex_lock(&mutex);
+    for (int i = 0; i < MAX_SESSIONS; i++) {
+        if (strcmp(session_list[i].username, username) == 0) {
+            pthread_mutex_unlock(&mutex);
+            return &session_list[i];
+        }
+    }
+    pthread_mutex_unlock(&mutex);
+    return NULL;
+}
+
+
 int session_set_path(int sockfd,char* new_path){
     if(!new_path) return -1;
 

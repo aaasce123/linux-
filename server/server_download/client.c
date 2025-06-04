@@ -1,11 +1,7 @@
 #include "client.h"
 #include <complex.h>
-#include <math.h>
 #include <sys/socket.h>
 #include<stdio.h>
-#include<stdlib.h>
-#include"socket_utils.h"
-#include<string.h>
 #define COMMAND_MAX_LEN 100
 void help();
 
@@ -16,13 +12,14 @@ int main(int argc, char *argv[]){
   train_t train;
   char username[99];
   int choice=0;
+  char token[256]={0};
 
   while(choice!=3){
   printf("1登录,2注册,3退出\n");
   scanf("%d",&choice);
   if(choice==1){
       userLogin1(client_fd,&train,username);
-      userLogin2(client_fd,&train,username);
+      userLogin2(client_fd,&train,username,token);
       break;
   }
   if(choice==2){
@@ -37,7 +34,7 @@ int main(int argc, char *argv[]){
 //先输入命令
     scanf("%s",Cmd_str);
 
-    Command(Cmd_str,client_fd);
+    Command(Cmd_str,client_fd,token);
     //标出来了任务信息，
    }
   //客户端需要把不同命令种类发送的分开

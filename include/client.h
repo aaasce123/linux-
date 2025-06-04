@@ -1,5 +1,6 @@
 #ifndef CLIENT_H
 #define CLIENT_H
+
 #define _POSIX_C_SOURCE 200809L
 #define BUFFER_SIZE 4096
 #define _GNU_SOURCE
@@ -46,21 +47,32 @@ typedef struct{
     CmdType type;
     char buff[1024];
 }train_t;
+
+typedef struct{
+     char buff[100];
+     char token[256];
+ }puts_args;
+ 
+typedef struct{
+        char buff[100];
+        char token[256];
+ }gets_args;
+ 
 int cli_tcpinit(char* ip,char* port);
 void help();
 
 CmdType Cmd_change(char* str);
 
-void Command(char* str,int sockfd);
+void Command(char* str,int sockfd,char* token);
 void Cmd_pwd(int sockfd);
 void Cmd_ls(int sockfd);
 void Cmd_cd(int sockfd);
 void Cmd_rm(int sockfd); 
 void Cmd_mkdir(int sockfd);
-void* thread_puts(void* arg);
-void* thread_gets(void* arg);
-void Cmd_puts();
-void Cmd_gets();
+void* thread_puts(void* args);
+void* thread_gets(void* args);
+void Cmd_puts(char* token);
+void Cmd_gets(char* token);
 
 
 int frecv(int sockfd,void* buff,size_t length);
@@ -68,7 +80,7 @@ int fsend(int sock,void* buff,size_t length);
 
 //命令接收
 void userLogin1(int sockfd,train_t* train,char* username);
-void userLogin2(int sockfd,train_t* train,char* username);
+void userLogin2(int sockfd,train_t* train,char* username,char* token);
 void userRegister1(int sockfd,train_t* train,char* username);
 void userRegister2(int sockfd,train_t* train,char* username);
 

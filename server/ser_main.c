@@ -1,6 +1,7 @@
 #include"ser_main.h"
 #include <bits/pthreadtypes.h>
 #include<syslog.h>
+#include "jwt_token.h"
 #include "session.h"
 #include "sha1.h"
 #include "threadpool.h"
@@ -98,14 +99,6 @@ void dotask(task_t* ptask){
         case COMMAND_RM:
             removeCommand(ptask);
             break;   
-        case COMMAND_GETS:
-            getsCommand(ptask);
-            addEpollfd(ptask->epoll_fd,ptask->accept_fd,EPOLLIN|EPOLLET);
-            break;
-        case COMMAND_PUTS:
-            putsCommand(ptask);
-            addEpollfd(ptask->epoll_fd,ptask->accept_fd,EPOLLIN|EPOLLET);
-            break;
         case TASK_LOGIN_SECTION1:
             user_Login1(ptask);
            break;
@@ -498,19 +491,14 @@ void removeCommand(task_t* ptask) {
     }
 
     void getsCommand(task_t* ptask){
-        session_t* user = session_user(ptask->accept_fd);
-      
-        if (user == NULL) {
-            CmdType status = COMMAND_ERROR;
-            send(ptask->accept_fd, &status, sizeof(status), 0);
-            return;
-        }
+
+        session_t* user=session_user(ptask->accept_fd);
 
         char virtual_path[512] = {0};
        if (ptask->data[0] == '/') {
-           snprintf(virtual_path, sizeof(virtual_path), "%s", ptask->data);
+           snprintf(virtual_path, sizeof(virtual_path), "%s",ptask->data);
        } else {
-           snprintf(virtual_path, sizeof(virtual_path), "%s/%s", user->current_path, ptask->data);
+           snprintf(virtual_path, sizeof(virtual_path), "%s/%s", user->current_path,ptask->data);
        }
   
        char filename[256] = {0};
@@ -518,7 +506,7 @@ void removeCommand(task_t* ptask) {
        if (last_slash != NULL) {
        snprintf(filename, sizeof(filename), "%s", last_slash + 1); // 截取最后一个 '/' 后的内容
       } else {
-       snprintf(filename, sizeof(filename), "%s", ptask->data);    // 没有 '/'，说明本身就是文件名
+       snprintf(filename, sizeof(filename), "%s",ptask->data);    // 没有 '/'，说明本身就是文件名
       }
 
 
@@ -553,7 +541,7 @@ void removeCommand(task_t* ptask) {
         } else {
             getsmallfile(file_fd, ptask->accept_fd, file_length);
         }
-
+        session_remove(ptask->accept_fd);
     }
 
     void getsmallfile(int fd,int sockfd,int file_length){
@@ -619,14 +607,10 @@ void removeCommand(task_t* ptask) {
 
 
     void putsCommand(task_t* ptask){
-        session_t* user = session_user(ptask->accept_fd);
-        if (user == NULL) {
-            CmdType status = COMMAND_ERROR;
-            send(ptask->accept_fd, &status, sizeof(status), 0);
-            return;
-        }
+        session_t* user=session_user(ptask->accept_fd);
+
          char virtual_path[512] = {0};
-          snprintf(virtual_path, sizeof(virtual_path), "%s/%s", user->current_path, ptask->data);
+          snprintf(virtual_path, sizeof(virtual_path), "%s/%s", user->current_path,ptask->data);
 
         char real_path[1024] = {0};
         snprintf(real_path, sizeof(real_path), "/home/cccbiji/linux-/server/server_download/%s",ptask->data);
@@ -689,10 +673,11 @@ void removeCommand(task_t* ptask) {
                 // 秒传文件，文件长度从数据库获取（可选）
                 printf("文件秒传，跳过上传\n");
             insert_file_metadata_speed(ptask,filename,virtual_path,sha1 );
-
         }
+        session_remove(ptask->accept_fd);
+
     }
-    }
+ }
 
 
     int check_file_exists(const char* sha1, task_t* ptask){

@@ -779,6 +779,7 @@ void puts_send(char* filename, int sockfd) {
     // 秒传判定由服务器处理，客户端只需继续等接收指令
     // 发送文件大小
     send(sockfd, &file_length, sizeof(file_length), 0);
+
     // 根据大小选择传输方式
     if (file_length > 100 * 1024 * 1024) {
         putsbig_send(file_fd, sockfd, file_length);

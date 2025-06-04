@@ -18,6 +18,7 @@ void session_init();
 int session_add(int sockfd,char* username,char* init_path);
 
 session_t* session_user(int sockfd);
+session_t* session_user_by_name(const char* username);
 
 int session_set_path(int sockfd, char* new_path);
 

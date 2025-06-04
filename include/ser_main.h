@@ -3,6 +3,7 @@
 #define _POSIX_C_SOURCE 200809L 
 #define _GNU_SOURCE 
 #include"socket_utils.h"
+#include"jwt_token.h"
 #include<sys/sendfile.h>
 #include"sha1.h"
 #include <unistd.h>
@@ -91,6 +92,7 @@ void insert_file_metadata_speed(task_t* ptask,char* filename,char* virtual, char
 void getsCommand(task_t* ptaskd);
 void getsmallfile(int fd, int sockfd,int file_length);
 void getsbigfile(int fd,int sockfd,int file_length);
+
 
 void server_down(int exitPipe);
 #endif

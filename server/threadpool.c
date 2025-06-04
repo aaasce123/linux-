@@ -1,4 +1,7 @@
+#include <string.h>
 #include <sys/epoll.h>
+#include <mysql/mysql.h>
+#include <sys/socket.h>
 #include <sys/syslog.h>
 #include<syslog.h>
 #include<unistd.h>
@@ -8,7 +11,9 @@
 #include <stdio.h>
 #include<syslog.h>
 #include <stdlib.h>
+#include "jwt_token.h"
 #include"ser_main.h"
+#include "session.h"
 
 void pthread_error(int ret ,char* str){
 
@@ -275,13 +280,12 @@ void server_down(int exitPipe) {
             int fd = events[i].data.fd;
 
             if (fd == listen_fd) {
-                printf("下载池连接建立中..\n");
+                printf("\n\n下载池连接建立中..\n");
                 int accept_fd = accept(listen_fd, NULL, NULL);
-                printf("通信socket:%d\n", accept_fd);
                 my_error(accept_fd, -1, "accept");
 
                 addEpollfd(epoll_fd, accept_fd, EPOLLIN | EPOLLET);
-                syslog(LOG_INFO, "建立链接socfd:%d 时间:%s ", accept_fd, getCurrentTime());
+                syslog(LOG_INFO, "建立链接sockfd:%d 时间:%s ", accept_fd, getCurrentTime());
             }
             else if (fd == exitPipe) {
                 printf("下载池进入退出处理\n");
@@ -297,6 +301,30 @@ void server_down(int exitPipe) {
             }
             else {
                 int cmdType = -1;
+                int token_len=0;
+                char token[256];
+                recv(fd,&token_len,sizeof(token_len),0);
+                recv(fd,token,token_len,0);
+                Jwt_payload* user=jwt_decode(token);
+
+                session_t* u1=session_user_by_name(user->username);
+                if(u1==NULL){
+                    CmdType status=COMMAND_ERROR;
+                    send(fd,&status,sizeof(status),0); 
+                    printf("没有该用户连接状态\n");
+                    return;
+                   }
+
+                if(user==NULL){
+                    CmdType status=COMMAND_ERROR;
+                    send(fd,&status,sizeof(status),0); 
+                    return;
+                }
+                    CmdType status=COMMAND_OK;
+                    send(fd,&status,sizeof(status),0); 
+
+                free_payload(user);
+                
                 int ret = recvn(fd, epoll_fd, &cmdType, sizeof(cmdType));
                 printf("下载池recv cmd type: %s\n\n", TypeToStr(cmdType));
 
@@ -310,25 +338,21 @@ void server_down(int exitPipe) {
                 ptask->type = cmdType;
                 ptask->conn = conn;
 
-                if (length > 0) {
-                    ret = recvn(fd, epoll_fd, ptask->data, length);
+                session_add(ptask->accept_fd,u1->username,u1->current_path);
+
+
+                ret = recvn(fd, epoll_fd, ptask->data, length);
+
                     if (ret > 0) {
-                        if (ptask->type == COMMAND_PUTS || ptask->type == COMMAND_GETS) {
-                            DelEpollfd(ptask->epoll_fd, ptask->accept_fd);
-                        }
+
+                        DelEpollfd(ptask->epoll_fd, ptask->accept_fd);
                         syslog(LOG_INFO, "下载池操作类型：%s ,操作数据：%s 时间：%s",
-                               TypeToStr(ptask->type), ptask->data, getCurrentTime());
+                                TypeToStr(ptask->type), ptask->data, getCurrentTime());
 
                         taskEnque(&downpool->que, ptask);
-                    }
+                       }
                 }
-                else if (length == 0) {
-                    syslog(LOG_INFO, "下载池操作类型：%s ,操作数据：%s 时间：%s",
-                           TypeToStr(ptask->type), ptask->data, getCurrentTime());
 
-                    taskEnque(&downpool->que, ptask);
-                }
-            }
         }
     }
 }

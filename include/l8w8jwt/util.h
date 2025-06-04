@@ -27,6 +27,7 @@
 extern "C" {
 #endif
 
+#include <stdlib.h>
 #include <stddef.h>
 #include "version.h"
 
@@ -50,6 +51,57 @@ L8W8JWT_API int l8w8jwt_hexstr2bin(const char* hexstr, size_t hexstr_length, uns
  * @return If the strings are equal, <code>0</code> is returned. Otherwise, something else.
  */
 L8W8JWT_API int l8w8jwt_strncmpic(const char* str1, const char* str2, size_t n);
+
+/**
+ * Compares two blocks of memory against equality in a cryptographically safe manner (time-safe impl./constant-time comparison).
+ * @param mem1 Memory block 1 to compare.
+ * @param mem2 Memory block 2 to compare.
+ * @param n How many bytes to compare.
+ * @return Returns <code>0</code> if the two memory blocks are equal for the passed amount of bytes.
+ */
+L8W8JWT_API int l8w8jwt_memcmp(const void* mem1, const void* mem2, size_t n);
+
+#ifndef L8W8JWT_PLATFORM_MALLOC_ALT
+/**
+ * Set this pre-processor definition to \c 1 if you need to
+ * provide custom implementation of malloc
+ */
+#define L8W8JWT_PLATFORM_MALLOC_ALT 0
+#endif
+
+#ifndef L8W8JWT_PLATFORM_CALLOC_ALT
+/**
+ * Set this pre-processor definition to \c 1 if you need to
+ * provide custom implementation of calloc
+ */
+#define L8W8JWT_PLATFORM_CALLOC_ALT 0
+#endif
+
+#ifndef L8W8JWT_PLATFORM_REALLOC_ALT
+/**
+ * Set this pre-processor definition to \c 1 if you need to
+ * provide custom implementation of realloc
+ */
+#define L8W8JWT_PLATFORM_REALLOC_ALT 0
+#endif
+
+#if L8W8JWT_PLATFORM_MALLOC_ALT
+extern void *(*l8w8jwt_malloc) (size_t size);
+#else
+#define l8w8jwt_malloc malloc
+#endif
+
+#if L8W8JWT_PLATFORM_CALLOC_ALT
+extern void *(*l8w8jwt_calloc) (size_t nmemb, size_t size);
+#else
+#define l8w8jwt_calloc calloc
+#endif
+
+#if L8W8JWT_PLATFORM_REALLOC_ALT
+extern void *(*l8w8jwt_realloc) (void *ptr, size_t size);
+#else
+#define l8w8jwt_realloc realloc
+#endif
 
 #ifdef __cplusplus
 } // extern "C"
